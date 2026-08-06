@@ -1,0 +1,1 @@
+Owns Provider listing management, admin moderation — deferred past the 3-week checkpoint, Django admin panel used as placeholder for now

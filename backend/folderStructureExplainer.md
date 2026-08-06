@@ -18,10 +18,3 @@ backend/
 ├── notifications/                     # APP — FR7
 └── providers_admin/                     # APP — FR10
 
-What goes in each app
-
-students/	FR1, FR8	Registration, email verification, profile, document uploads
-opportunities/	FR2, FR9	Eligible/all view toggle, the raw SQL matching query, listing verification
-applications/	FR3–FR6	Review screen, assisted submit, raw SQL tracking dashboard, receipts
-notifications/	FR7	Bookmarks, deadline reminders, in-app/email alerts
-providers_admin/	FR10	Provider listing management, admin moderation — deferred past the 3-week checkpoint, Django admin panel used as placeholder for now
