@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scout — Backend Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7f8fa; --surface:#ffffff; --border:#e3e6eb; --border-strong:#c9ced8;
+    --text-1:#12151c; --text-2:#4b5262; --text-3:#8a92a3;
+    --purple-50:#f3f1fd; --purple-500:#8b7ff0; --purple-600:#6f61e0; --purple-800:#3f3597;
+    --teal-50:#eefaf6; --teal-500:#14b891; --teal-600:#0d9488; --teal-800:#0f5f52;
+    --amber-50:#fef8ec; --amber-500:#e8a52b; --amber-600:#d97706; --amber-800:#8a4c0a;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text-1); font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;}
+  .page{max-width:1080px; margin:0 auto; padding:56px 40px 80px;}
+  .eyebrow{font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; letter-spacing:.08em; color:var(--purple-600); text-transform:uppercase; margin-bottom:10px;}
+  h1{font-size:32px; font-weight:700; margin:0 0 8px; letter-spacing:-0.02em;}
+  .subtitle{font-size:16px; color:var(--text-2); margin:0 0 32px; max-width:640px; line-height:1.55;}
+
+  .legend{display:flex; gap:20px; margin-bottom:36px; flex-wrap:wrap;}
+  .legend-item{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-2);}
+  .swatch{width:12px; height:12px; border-radius:4px;}
+  .swatch.orm{background:var(--teal-500);}
+  .swatch.raw{background:var(--amber-500);}
+
+  .container{
+    border:1.5px dashed var(--border-strong); border-radius:20px; padding:40px 32px 32px; position:relative; background:#fbfbfc;
+  }
+  .container-label{
+    position:absolute; top:-13px; left:28px; background:var(--bg); padding:0 10px;
+    font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; color:var(--text-3); letter-spacing:.03em;
+  }
+
+  .router{
+    max-width:280px; margin:0 auto 36px; background:var(--surface); border:1px solid var(--border);
+    border-radius:14px; padding:20px 24px; text-align:center; box-shadow:var(--shadow-sm); position:relative;
+  }
+  .router::before{content:''; position:absolute; top:0; left:0; right:0; height:4px; background:var(--purple-500); border-radius:14px 14px 0 0;}
+  .router .tier-tag{color:var(--purple-800); background:var(--purple-50);}
+  .router h2{font-size:16px; font-weight:600; margin:8px 0 4px;}
+  .router p{margin:0; font-size:12.5px; color:var(--text-3); font-family:'JetBrains Mono',monospace;}
+
+  .stem{width:1.5px; height:28px; background:var(--border-strong); margin:0 auto;}
+
+  .app-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:18px;}
+  .app-grid.row2{grid-template-columns:repeat(2, 1fr); max-width:640px; margin:18px auto 0;}
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:22px 20px;
+    box-shadow:var(--shadow-sm); position:relative; overflow:hidden;
+  }
+  .card::before{content:''; position:absolute; top:0; left:0; right:0; height:4px;}
+  .card.orm::before{background:var(--teal-500);}
+  .card.raw::before{background:var(--amber-500);}
+  .tier-tag{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.05em;
+    text-transform:uppercase; margin-bottom:10px; display:inline-block; padding:3px 9px; border-radius:20px;
+  }
+  .card.orm .tier-tag{color:var(--teal-800); background:var(--teal-50);}
+  .card.raw .tier-tag{color:var(--amber-800); background:var(--amber-50);}
+  .card h3{font-size:16px; font-weight:600; margin:0 0 3px;}
+  .card .fr{font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--text-3); margin:0 0 14px;}
+  .card ul{margin:0; padding:0; list-style:none;}
+  .card li{font-size:12.5px; color:var(--text-2); line-height:1.55; padding-left:14px; position:relative; margin-bottom:5px;}
+  .card li::before{content:'—'; position:absolute; left:0; color:var(--text-3);}
+  .card li:last-child{margin-bottom:0;}
+
+  .footnote{margin-top:36px; font-size:13px; color:var(--text-3); line-height:1.6; max-width:720px;}
+  .footnote code{background:#eceef2; padding:1px 6px; border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-2);}
+
+  footer{margin-top:48px; padding-top:20px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;}
+  footer span{font-size:12px; color:var(--text-3); font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="eyebrow">Scout Platform</div>
+  <h1>Backend architecture</h1>
+  <p class="subtitle">Django REST Framework, structured as one app per functional requirement cluster. Every app maps to a named owner on the backend track.</p>
+
+  <div class="legend">
+    <div class="legend-item"><span class="swatch orm"></span>ORM only</div>
+    <div class="legend-item"><span class="swatch raw"></span>ORM + parameterized raw SQL</div>
+  </div>
+
+  <div class="container">
+    <span class="container-label">scout_backend/</span>
+
+    <div class="router">
+      <span class="tier-tag">Entry point</span>
+      <h2>URL router</h2>
+      <p>DRF views · token auth</p>
+    </div>
+    <div class="stem"></div>
+
+    <div class="app-grid">
+      <div class="card orm">
+        <span class="tier-tag">FR1, FR8</span>
+        <h3>students</h3>
+        <div class="fr">students/</div>
+        <ul>
+          <li>Registration, email verification</li>
+          <li>Profile CRUD</li>
+          <li>Document upload and storage</li>
+        </ul>
+      </div>
+
+      <div class="card raw">
+        <span class="tier-tag">FR2, FR9</span>
+        <h3>opportunities</h3>
+        <div class="fr">opportunities/</div>
+        <ul>
+          <li>Eligible / all view toggle</li>
+          <li>Raw SQL matching query</li>
+          <li>Listing verification (admin)</li>
+        </ul>
+      </div>
+
+      <div class="card raw">
+        <span class="tier-tag">FR3–FR6</span>
+        <h3>applications</h3>
+        <div class="fr">applications/</div>
+        <ul>
+          <li>Review screen, assisted submit</li>
+          <li>Raw SQL tracking dashboard</li>
+          <li>Receipts and summary reports</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="app-grid row2">
+      <div class="card orm">
+        <span class="tier-tag">FR7</span>
+        <h3>notifications</h3>
+        <div class="fr">notifications/</div>
+        <ul>
+          <li>Bookmarking</li>
+          <li>Deadline reminders</li>
+          <li>Real-time in-app / email alerts</li>
+        </ul>
+      </div>
+
+      <div class="card orm">
+        <span class="tier-tag">FR10</span>
+        <h3>providers_admin</h3>
+        <div class="fr">providers_admin/</div>
+        <ul>
+          <li>Listing management (providers)</li>
+          <li>User and listing moderation</li>
+          <li>Django admin panel</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p class="footnote">
+    Every model mapped to a hand-written Supabase table sets <code>class Meta: managed = False</code>, so Django never attempts to auto-alter the schema. Raw SQL queries live in <code>database/queries/</code> and are called from their owning app's views using parameterized <code>%s</code> placeholders only.
+  </p>
+
+  <footer>
+    <span>SCOUT · BACKEND ARCHITECTURE</span>
+    <span>v1.0</span>
+  </footer>
+
+</div>
+</body>
+</html>

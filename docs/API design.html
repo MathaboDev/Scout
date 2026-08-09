@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scout — API Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7f8fa; --surface:#ffffff; --border:#e3e6eb; --border-strong:#c9ced8;
+    --text-1:#12151c; --text-2:#4b5262; --text-3:#8a92a3;
+    --blue-50:#eef4fd; --blue-600:#2563eb; --blue-700:#1d4ed8; --blue-800:#1e3a6f;
+    --green-50:#eef9f0; --green-600:#16a34a; --green-800:#166534;
+    --amber-50:#fef8ec; --amber-600:#d97706; --amber-800:#8a4c0a;
+    --red-50:#fdf1f1; --red-600:#dc2626; --red-800:#8f1f1f;
+    --purple-50:#f3f1fd; --purple-600:#6f61e0; --purple-800:#3f3597;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text-1); font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;}
+  .page{max-width:1080px; margin:0 auto; padding:56px 40px 80px;}
+  .eyebrow{font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; letter-spacing:.08em; color:var(--blue-600); text-transform:uppercase; margin-bottom:10px;}
+  h1{font-size:32px; font-weight:700; margin:0 0 8px; letter-spacing:-0.02em;}
+  .subtitle{font-size:16px; color:var(--text-2); margin:0 0 44px; max-width:660px; line-height:1.55;}
+  h2.section{font-size:13px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); margin:0 0 16px; padding-top:8px;}
+
+  .group{background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-sm); margin-bottom:22px; overflow:hidden;}
+  .group-head{padding:14px 20px; border-bottom:1px solid var(--border); background:#fbfbfc; font-size:13.5px; font-weight:600; color:var(--text-1); display:flex; justify-content:space-between; align-items:center;}
+  .group-head span{font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:500; color:var(--text-3); text-transform:none;}
+
+  table{width:100%; border-collapse:collapse;}
+  tr:not(:last-child) td{border-bottom:1px solid var(--border);}
+  td{padding:12px 20px; font-size:13px; vertical-align:middle;}
+  td.method{width:78px;}
+  td.path{font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--text-1); white-space:nowrap;}
+  td.access{width:100px; color:var(--text-3); font-size:12px;}
+  td.desc{color:var(--text-2);}
+
+  .badge{display:inline-block; padding:3px 9px; border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600;}
+  .badge.get{background:var(--blue-50); color:var(--blue-800);}
+  .badge.post{background:var(--green-50); color:var(--green-800);}
+  .badge.patch{background:var(--amber-50); color:var(--amber-800);}
+  .badge.delete{background:var(--red-50); color:var(--red-800);}
+
+  .flow{margin-top:52px;}
+  .timeline{position:relative; padding-left:36px;}
+  .timeline::before{content:''; position:absolute; left:11px; top:6px; bottom:6px; width:1.5px; background:var(--border-strong);}
+  .t-step{position:relative; padding-bottom:28px;}
+  .t-step:last-child{padding-bottom:0;}
+  .t-dot{
+    position:absolute; left:-36px; top:2px; width:24px; height:24px; border-radius:50%; background:var(--surface);
+    border:1.5px solid var(--blue-600); color:var(--blue-600); font-family:'JetBrains Mono',monospace; font-size:11px;
+    font-weight:600; display:flex; align-items:center; justify-content:center;
+  }
+  .t-card{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; box-shadow:var(--shadow-sm);}
+  .t-card strong{display:block; font-size:14px; margin-bottom:3px;}
+  .t-card p{margin:0; font-size:13px; color:var(--text-2); line-height:1.5;}
+  .t-card code{background:#eceef2; padding:1px 5px; border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:12px;}
+
+  .branch{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:4px;}
+  .branch-card{border-radius:12px; padding:16px 18px; border:1px solid;}
+  .branch-card.eligible{background:var(--amber-50); border-color:#f0d29b;}
+  .branch-card.all{background:var(--purple-50); border-color:#c9c2f5;}
+  .branch-tag{font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; margin-bottom:6px; display:block;}
+  .branch-card.eligible .branch-tag{color:var(--amber-800);}
+  .branch-card.all .branch-tag{color:var(--purple-800);}
+  .branch-card strong{display:block; font-size:13.5px; margin-bottom:4px; color:var(--text-1);}
+  .branch-card p{margin:0; font-size:12.5px; color:var(--text-2); line-height:1.5;}
+
+  footer{margin-top:52px; padding-top:20px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;}
+  footer span{font-size:12px; color:var(--text-3); font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="eyebrow">Scout Platform</div>
+  <h1>API design</h1>
+  <p class="subtitle">REST endpoint reference and the request lifecycle for eligibility checks — the one path where the client's toggle choice determines the query strategy on the backend.</p>
+
+  <h2 class="section">Auth &amp; profile</h2>
+  <div class="group">
+    <div class="group-head">students app <span>FR1, FR8</span></div>
+    <table>
+      <tr><td class="method"><span class="badge post">POST</span></td><td class="path">/api/auth/register/</td><td class="access">Public</td><td class="desc">Create account, trigger verification email</td></tr>
+      <tr><td class="method"><span class="badge post">POST</span></td><td class="path">/api/auth/verify-email/</td><td class="access">Public</td><td class="desc">Confirm email, unlock full access</td></tr>
+      <tr><td class="method"><span class="badge post">POST</span></td><td class="path">/api/auth/login/</td><td class="access">Public</td><td class="desc">Verify credentials, issue auth token</td></tr>
+      <tr><td class="method"><span class="badge post">POST</span></td><td class="path">/api/auth/logout/</td><td class="access">Student</td><td class="desc">Invalidate session on this device</td></tr>
+      <tr><td class="method"><span class="badge get">GET</span></td><td class="path">/api/profile/</td><td class="access">Student</td><td class="desc">Read profile, excluding sensitive fields</td></tr>
+      <tr><td class="method"><span class="badge patch">PATCH</span></td><td class="path">/api/profile/</td><td class="access">Student</td><td class="desc">Update field of study, year, average, etc.</td></tr>
+      <tr><td class="method"><span class="badge get">GET</span></td><td class="path">/api/documents/</td><td class="access">Student</td><td class="desc">List uploaded documents</td></tr>
+      <tr><td class="method"><span class="badge post">POST</span></td><td class="path">/api/documents/</td><td class="access">Student</td><td class="desc">Upload or replace a document</td></tr>
+    </table>
+  </div>
+
+  <h2 class="section">Opportunities</h2>
+  <div class="group">
+    <div class="group-head">opportunities app <span>FR2, FR9, FR10</span></div>
+    <table>
+      <tr><td class="method"><span class="badge get">GET</span></td><td class="path">/api/opportunities/?view=eligible|all</td><td class="access">Student</td><td class="desc">Toggled view — raw SQL match or ORM list</td></tr>
+      <tr><td class="method"><span class="badge get">GET</span></td><td class="path">/api/opportunities/{id}/</td><td class="access">Student</td><td class="desc">Single listing detail</td></tr>
+      <tr><td class="method"><span class="badge post">POST</span></td><td class="path">/api/opportunities/</td><td class="access">Provider</td><td class="desc">Create a new listing</td></tr>
+      <tr><td class="method"><span class="badge patch">PATCH</span></td><td class="path">/api/opportunities/{id}/</td><td class="access">Provider</td><td class="desc">Edit an owned listing</td></tr>
+      <tr><td class="method"><span class="badge delete">DELETE</span></td><td class="path">/api/opportunities/{id}/</td><td class="access">Provider</td><td class="desc">Remove an owned listing</td></tr>
+      <tr><td class="method"><span class="badge post">POST</span></td><td class="path">/api/opportunities/{id}/verify/</td><td class="access">Admin</td><td class="desc">Approve listing before it goes live</td></tr>
+    </table>
+  </div>
+
+  <h2 class="section">Applications</h2>
+  <div class="group">
+    <div class="group-head">applications app <span>FR3–FR6</span></div>
+    <table>
+      <tr><td class="method"><span class="badge post">POST</span></td><td class="path">/api/applications/{opp_id}/review/</td><td class="access">Student</td><td class="desc">Pre-filled review screen before submission</td></tr>
+      <tr><td class="method"><span class="badge post">POST</span></td><td class="path">/api/applications/{opp_id}/submit/</td><td class="access">Student</td><td class="desc">Confirm and submit, generates receipt</td></tr>
+      <tr><td class="method"><span class="badge get">GET</span></td><td class="path">/api/applications/</td><td class="access">Student</td><td class="desc">Tracking dashboard — raw SQL query</td></tr>
+      <tr><td class="method"><span class="badge get">GET</span></td><td class="path">/api/applications/{id}/receipt/</td><td class="access">Student</td><td class="desc">Single application receipt</td></tr>
+      <tr><td class="method"><span class="badge get">GET</span></td><td class="path">/api/applications/summary/</td><td class="access">Student</td><td class="desc">Downloadable summary report</td></tr>
+      <tr><td class="method"><span class="badge patch">PATCH</span></td><td class="path">/api/applications/{id}/status/</td><td class="access">Provider</td><td class="desc">Update outcome, logged with timestamp</td></tr>
+    </table>
+  </div>
+
+  <h2 class="section">Bookmarks, notifications &amp; admin</h2>
+  <div class="group">
+    <div class="group-head">notifications, providers_admin apps <span>FR7, FR10</span></div>
+    <table>
+      <tr><td class="method"><span class="badge get">GET</span></td><td class="path">/api/bookmarks/</td><td class="access">Student</td><td class="desc">List saved opportunities</td></tr>
+      <tr><td class="method"><span class="badge post">POST</span></td><td class="path">/api/bookmarks/</td><td class="access">Student</td><td class="desc">Bookmark an opportunity</td></tr>
+      <tr><td class="method"><span class="badge delete">DELETE</span></td><td class="path">/api/bookmarks/{id}/</td><td class="access">Student</td><td class="desc">Remove a bookmark</td></tr>
+      <tr><td class="method"><span class="badge get">GET</span></td><td class="path">/api/notifications/</td><td class="access">Student</td><td class="desc">List notifications, read/unread</td></tr>
+      <tr><td class="method"><span class="badge get">GET</span></td><td class="path">/api/admin/users/</td><td class="access">Admin</td><td class="desc">List and manage all users</td></tr>
+      <tr><td class="method"><span class="badge patch">PATCH</span></td><td class="path">/api/admin/users/{id}/suspend/</td><td class="access">Admin</td><td class="desc">Suspend an account or listing</td></tr>
+    </table>
+  </div>
+
+  <div class="flow">
+    <h2 class="section">Request lifecycle — GET /opportunities</h2>
+    <div class="timeline">
+
+      <div class="t-step">
+        <div class="t-dot">1</div>
+        <div class="t-card">
+          <strong>Client sends request</strong>
+          <p><code>GET /opportunities?view=eligible</code> with the bearer token in the header — no profile fields attached.</p>
+        </div>
+      </div>
+
+      <div class="t-step">
+        <div class="t-dot">2</div>
+        <div class="t-card">
+          <strong>Token validated</strong>
+          <p>Django's auth layer decodes the token and identifies the requesting student.</p>
+        </div>
+      </div>
+
+      <div class="t-step">
+        <div class="t-dot">3</div>
+        <div class="t-card">
+          <strong>Profile fetched server-side</strong>
+          <p>Django reads current field of study, year level, and average directly from Supabase — never from the request.</p>
+        </div>
+      </div>
+
+      <div class="t-step">
+        <div class="t-dot">4</div>
+        <div class="t-card">
+          <strong>Query strategy branches on <code>view</code></strong>
+          <p>The two paths below are mutually exclusive per request.</p>
+          <div class="branch">
+            <div class="branch-card eligible">
+              <span class="branch-tag">view=eligible</span>
+              <strong>Raw SQL matching</strong>
+              <p>Parameterized query against field of study, year level, and opportunity type.</p>
+            </div>
+            <div class="branch-card all">
+              <span class="branch-tag">view=all</span>
+              <strong>ORM query</strong>
+              <p>Filtered to verified, active, and not-yet-closed listings only.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="t-step">
+        <div class="t-dot">5</div>
+        <div class="t-card">
+          <strong>Response returned</strong>
+          <p>Matched or full opportunity list serialized and sent back as JSON.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    <span>SCOUT · API DESIGN</span>
+    <span>v1.0</span>
+  </footer>
+
+</div>
+</body>
+</html>

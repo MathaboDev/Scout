@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scout — System Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7f8fa; --surface:#ffffff; --border:#e3e6eb; --border-strong:#c9ced8;
+    --text-1:#12151c; --text-2:#4b5262; --text-3:#8a92a3;
+    --blue-50:#eef4fd; --blue-500:#3b82f6; --blue-600:#2563eb; --blue-800:#1e3a6f;
+    --teal-50:#eefaf6; --teal-500:#14b891; --teal-600:#0d9488; --teal-800:#0f5f52;
+    --amber-50:#fef8ec; --amber-500:#e8a52b; --amber-600:#d97706; --amber-800:#8a4c0a;
+    --green-50:#eef9f0; --green-600:#16a34a; --green-800:#166534;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+    --shadow-md:0 4px 10px rgba(16,24,40,.06), 0 2px 4px rgba(16,24,40,.04);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text-1);
+    font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;
+  }
+  .page{max-width:1080px; margin:0 auto; padding:56px 40px 80px;}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600;
+    letter-spacing:.08em; color:var(--blue-600); text-transform:uppercase; margin-bottom:10px;
+  }
+  h1{font-size:32px; font-weight:700; margin:0 0 8px; letter-spacing:-0.02em;}
+  .subtitle{font-size:16px; color:var(--text-2); margin:0 0 48px; max-width:640px; line-height:1.55;}
+
+  .tier-row{display:grid; grid-template-columns:1fr auto 1fr auto 1fr; align-items:stretch; gap:0; margin-bottom:8px;}
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:26px 24px; box-shadow:var(--shadow-sm); position:relative; overflow:hidden;
+  }
+  .card::before{content:''; position:absolute; top:0; left:0; right:0; height:4px;}
+  .card.frontend::before{background:var(--blue-500);}
+  .card.backend::before{background:var(--teal-500);}
+  .card.data::before{background:var(--amber-500);}
+  .tier-tag{
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; letter-spacing:.06em;
+    text-transform:uppercase; margin-bottom:10px; display:inline-block; padding:3px 9px; border-radius:20px;
+  }
+  .frontend .tier-tag{color:var(--blue-800); background:var(--blue-50);}
+  .backend .tier-tag{color:var(--teal-800); background:var(--teal-50);}
+  .data .tier-tag{color:var(--amber-800); background:var(--amber-50);}
+  .card h2{font-size:19px; font-weight:600; margin:0 0 4px; letter-spacing:-0.01em;}
+  .card .stack{font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--text-3); margin:0 0 16px;}
+  .card ul{margin:0; padding:0; list-style:none;}
+  .card li{
+    font-size:13.5px; color:var(--text-2); line-height:1.6; padding-left:16px; position:relative; margin-bottom:7px;
+  }
+  .card li::before{content:'—'; position:absolute; left:0; color:var(--text-3);}
+  .card li:last-child{margin-bottom:0;}
+  .card li.fix{color:var(--green-800); font-weight:500;}
+  .card li.fix::before{content:'✓'; color:var(--green-600); font-weight:700;}
+
+  .connector{display:flex; flex-direction:column; align-items:center; justify-content:center; width:64px; padding:0 4px;}
+  .connector .proto{
+    font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-3); writing-mode:vertical-rl;
+    text-orientation:mixed; margin-bottom:8px; letter-spacing:.04em;
+  }
+  .connector svg{width:100%; height:56px;}
+
+  .flow{margin-top:56px;}
+  .flow h3{font-size:13px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); margin:0 0 18px;}
+  .steps{display:flex; gap:0; border:1px solid var(--border); border-radius:14px; background:var(--surface); box-shadow:var(--shadow-sm); overflow:hidden;}
+  .step{flex:1; padding:20px 20px; position:relative;}
+  .step:not(:last-child){border-right:1px solid var(--border);}
+  .step:not(:last-child)::after{
+    content:''; position:absolute; right:-7px; top:50%; transform:translateY(-50%) rotate(45deg);
+    width:8px; height:8px; border-top:1px solid var(--border); border-right:1px solid var(--border);
+    background:var(--surface); z-index:1;
+  }
+  .step-num{
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; color:var(--blue-600);
+    background:var(--blue-50); width:22px; height:22px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; margin-bottom:10px;
+  }
+  .step p{margin:0; font-size:13px; color:var(--text-2); line-height:1.5;}
+  .step p strong{display:block; color:var(--text-1); font-size:13.5px; margin-bottom:2px; font-weight:600;}
+
+  .note{
+    margin-top:40px; background:var(--green-50); border:1px solid #c9e8d1; border-radius:14px;
+    padding:22px 26px; display:flex; gap:16px; align-items:flex-start;
+  }
+  .note .icon{
+    flex-shrink:0; width:32px; height:32px; border-radius:8px; background:var(--green-600); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px;
+  }
+  .note h4{margin:0 0 4px; font-size:14.5px; color:var(--green-800);}
+  .note p{margin:0; font-size:13.5px; color:#2c5c3f; line-height:1.6;}
+  .note code{background:#dcf3e2; padding:1px 6px; border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:12.5px;}
+
+  footer{margin-top:48px; padding-top:20px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;}
+  footer span{font-size:12px; color:var(--text-3); font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="eyebrow">Scout Platform</div>
+  <h1>System architecture</h1>
+  <p class="subtitle">Three-tier architecture. Eligibility is always determined server-side — the client never supplies profile data used for matching.</p>
+
+  <div class="tier-row">
+    <div class="card frontend">
+      <span class="tier-tag">Client</span>
+      <h2>React frontend</h2>
+      <div class="stack">Vite · React · Tailwind CSS</div>
+      <ul>
+        <li>Renders login, profile, and opportunities views</li>
+        <li>Toggles between eligible and all opportunities</li>
+        <li class="fix">Stores auth token only — no profile fields</li>
+      </ul>
+    </div>
+
+    <div class="connector">
+      <span class="proto">HTTPS / REST</span>
+      <svg viewBox="0 0 40 56" fill="none">
+        <line x1="6" y1="18" x2="34" y2="18" stroke="#94a3b8" stroke-width="1.5"/>
+        <path d="M28 12 L34 18 L28 24" stroke="#94a3b8" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="34" y1="40" x2="6" y2="40" stroke="#c9ced8" stroke-width="1.5"/>
+        <path d="M12 34 L6 40 L12 46" stroke="#c9ced8" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <div class="card backend">
+      <span class="tier-tag">API gateway</span>
+      <h2>Django REST API</h2>
+      <div class="stack">Django · DRF · psycopg2</div>
+      <ul>
+        <li>Validates auth token on every request</li>
+        <li>Looks up student profile server-side</li>
+        <li>ORM for CRUD, parameterized raw SQL for matching + tracking</li>
+      </ul>
+    </div>
+
+    <div class="connector">
+      <span class="proto">TCP 5432</span>
+      <svg viewBox="0 0 40 56" fill="none">
+        <line x1="6" y1="18" x2="34" y2="18" stroke="#94a3b8" stroke-width="1.5"/>
+        <path d="M28 12 L34 18 L28 24" stroke="#94a3b8" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="34" y1="40" x2="6" y2="40" stroke="#c9ced8" stroke-width="1.5"/>
+        <path d="M12 34 L6 40 L12 46" stroke="#c9ced8" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <div class="card data">
+      <span class="tier-tag">Database</span>
+      <h2>Supabase (PostgreSQL)</h2>
+      <div class="stack">Hosted Postgres · SQL editor</div>
+      <ul>
+        <li>Database as source of truth for schema</li>
+        <li>Enforces uniqueness — no duplicate applications</li>
+        <li>Sensitive fields structurally separated (POPIA)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="flow">
+    <h3>Eligibility request lifecycle</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <p><strong>Client requests</strong>GET /opportunities with bearer token — no profile data attached</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <p><strong>Token validated</strong>Django decodes the token and identifies the student</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <p><strong>Profile fetched</strong>Django reads current field of study, year, average from Supabase</p>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <p><strong>Query executed</strong>Raw SQL match for eligible view, ORM filter for all view</p>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <p><strong>Response returned</strong>Matched or full opportunity list sent back as JSON</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <div class="icon">✓</div>
+    <div>
+      <h4>Security correction applied</h4>
+      <p>An earlier draft stored <code>field_of_study</code>, <code>year</code>, and <code>average</code> in browser LocalStorage and sent them as request parameters; a student could tamper with these values in devtools to see opportunities they don't qualify for. The corrected flow above stores <code>token</code> only client-side; Django re-reads profile data from the database on every request.</p>
+    </div>
+  </div>
+
+  <footer>
+    <span>SCOUT · SYSTEM ARCHITECTURE</span>
+    <span>v1.0</span>
+  </footer>
+
+</div>
+</body>
+</html>
