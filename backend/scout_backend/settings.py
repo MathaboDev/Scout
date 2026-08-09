@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     "opportunities",
     "applications",
     "notifications",
+    "documents",
     "providers_admin",
 ]
 
@@ -122,6 +123,12 @@ WSGI_APPLICATION = "scout_backend.wsgi.application"
 # Supabase's direct connection (port 5432, not the 6543 pooler), you can
 # raise this safely.
 # ---------------------------------------------------------------------------
+
+#supabase settings for the documents storage bucket
+SUPABASE_URL = env("SUPABASE_URL", required=True)
+SUPABASE_SERVICE_KEY = env("SUPABASE_SERVICE_KEY", required=True)
+SUPABASE_BUCKET =env("SUPABASE_BUCKET", default="documents")
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
