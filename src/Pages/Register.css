@@ -1,0 +1,192 @@
+.register-page {
+  min-height: 100vh;
+  background-color: #f3f0e8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  box-sizing: border-box;
+}
+
+.register-card {
+  width: 100%;
+  max-width: 500px;
+  background-color: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-sizing: border-box;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* Scout logo */
+.scout-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  margin-bottom: 24px;
+}
+
+.scout-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #c6ff00;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #111111;
+
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.scout-brand span {
+  font-size: 25px;
+font-weight: 800;
+
+color: #111111;
+
+}
+
+/* Heading */
+
+.register-card h1 {
+  font-size: 32px;
+  margin-bottom: 10px;
+  color: #151515;
+}
+
+.subtitle {
+  color: #777;
+  font-size: 16px;
+  line-height: 1.5;
+  margin-bottom: 35px;
+}
+
+/* Form */
+
+.form-group {
+  margin-bottom: 25px;
+  
+}
+
+.form-group label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #111111;
+}
+
+.form-group input {
+  width: 100%;
+  height: 54px;
+
+  padding: 0 18px;
+
+  border: 1px solid #d9d6ce;
+  border-radius: 10px;
+
+  font-size: 16px;
+  background: #ffffff;
+
+  color: #333333;
+
+  box-sizing: border-box;
+  outline: none;
+}
+
+
+
+.form-group input:focus {
+  border-color: #151515;
+}
+
+/* Password row */
+
+.password-row {
+  display: flex;
+  gap: 18px;
+}
+
+.password-row .form-group {
+  flex: 1;
+}
+
+/* Button */
+
+.create-account-btn {
+  width: 100%;
+  height: 58px;
+
+  margin-top: 5px;
+
+  border: none;
+  border-radius: 30px;
+
+  background-color: #151317;
+  color: white;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.create-account-btn:hover {
+  background-color: #29262a;
+}
+
+/* Verification */
+
+.verification-message {
+  margin-top: 18px;
+
+  padding: 16px;
+
+  background-color: #eeece6;
+
+  border-radius: px;
+
+  color: #777;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Login */
+
+.login-text {
+  text-align: center;
+  margin-top: 28px;
+
+  color: #111111;
+  font-size: 15px;
+}
+
+.login-link {
+  color: #c6ff00;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+
+  .register-card {
+    padding: 30px 24px;
+  }
+
+  .register-card h1 {
+    font-size: 28px;
+  }
+
+  .password-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+}

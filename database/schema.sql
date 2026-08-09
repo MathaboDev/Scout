@@ -1,4 +1,4 @@
--- ============================================
+
 -- SCOUT Database Schema
 -- ============================================
 -- Tables live in Supabase; this file documents their structure — it is
