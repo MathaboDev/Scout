@@ -1,8 +1,8 @@
 -- ============================================
 -- SCOUT Database Schema
 -- ============================================
---Im using the Data Dictionary.md from docs folder  and ERD from the Term 2, if any chnges are made to the ERD, please update the schema.sql file accordingly.
---Not yet tested on Supabase 
+--using the Data Dictionary.md from docs folder  and ERD from the Term 2, if any chnges are made to the ERD, please update the schema.sql file accordingly.
+
 
 
 -- ============================================
