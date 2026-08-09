@@ -1,1 +1,0 @@
-Owns Bookmarks, deadline reminders, in-app/email alerts
