@@ -44,6 +44,9 @@ class DocumentUploadView(APIView):
         except SupabaseStorageError as e:
             return Response({"error": str(e)}, status=status.HTTP_502_BAD_GATEWAY)
 
+
+        # FR1: documents "may be updated or replaced at any time" — so re-uploading
+        # a matric certificate shouldn't error, it should retire the old row.
         Document.objects.filter(student_id=student_id, document_type=document_type, is_active=True).update(is_active=False)
 
         document = Document.objects.create(
@@ -59,6 +62,13 @@ class DocumentUploadView(APIView):
 
 
 class DocumentSignedURLView(APIView):
+    """
+    GET /api/documents/<id>/url/
+    Returns a fresh, short-lived signed URL so the frontend can display/download
+    a document. We check student_id matches before generating anything — otherwise
+    student A could read student B's document just by guessing an ID.
+    """
+
     def get(self, request, document_id):
         student_id = get_student_id(request.user)
 

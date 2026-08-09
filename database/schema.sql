@@ -1,10 +1,14 @@
 
 -- SCOUT Database Schema
 -- ============================================
--- Tables live in Supabase; this file documents their structure and it is
--- not run against a fresh database. 
+-- Tables live in Supabase; this file documents their structure — it is
+-- not run against a fresh database (the live tables already exist and
+-- were renamed to lowercase directly in Supabase). If this ever needs to
+-- be run fresh, note that Postgres folds all these unquoted identifiers
+-- to lowercase automatically, matching what's live.
+--
 -- authuserid on student bridges to Django's own auth_user table (created
--- by `python manage.py migrate`, not by this file); Django's
+-- by `python manage.py migrate`, not by this file) — Django's
 -- TokenAuthentication identifies people via auth_user, not via student
 -- directly, so this column is what links the two.
 
