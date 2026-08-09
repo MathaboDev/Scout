@@ -1,211 +1,215 @@
--- ============================================
+
 -- SCOUT Database Schema
 -- ============================================
---Im using the Data Dictionary.md from docs folder  and ERD from the Term 2, if any chnges are made to the ERD, please update the schema.sql file accordingly.
---Not yet tested on Supabase 
-
+-- Tables live in Supabase; this file documents their structure and it is
+-- not run against a fresh database. 
+-- authuserid on student bridges to Django's own auth_user table (created
+-- by `python manage.py migrate`, not by this file); Django's
+-- TokenAuthentication identifies people via auth_user, not via student
+-- directly, so this column is what links the two.
 
 -- ============================================
 -- STUDENT
 -- ============================================
-CREATE TABLE Student (
-    StudentID SERIAL PRIMARY KEY,
-    FirstName VARCHAR(50) NOT NULL,
-    LastName VARCHAR(50) NOT NULL,
-    Email VARCHAR(100) NOT NULL UNIQUE,
-    PasswordHash VARCHAR(255) NOT NULL,
-    IsEmailVerified BOOLEAN NOT NULL DEFAULT FALSE,
-    AccountStatus VARCHAR(20) NOT NULL DEFAULT 'Active',
-    CreatedAt TIMESTAMP NOT NULL DEFAULT NOW(),
-    UpdatedAt TIMESTAMP NOT NULL DEFAULT NOW()
+CREATE TABLE student (
+    studentid SERIAL PRIMARY KEY,
+    firstname VARCHAR(50) NOT NULL,
+    lastname VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    passwordhash VARCHAR(255),  -- nullable: Django's auth_user.password is now the real credential store
+    authuserid INTEGER UNIQUE REFERENCES authuser(id) ON DELETE CASCADE,
+    isemailverified BOOLEAN NOT NULL DEFAULT FALSE,
+    accountstatus VARCHAR(20) NOT NULL DEFAULT 'Active',
+    createdat TIMESTAMP NOT NULL DEFAULT NOW(),
+    updatedat TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- ============================================
 -- ADMIN
 -- ============================================
-CREATE TABLE Admin (
-    AdminID SERIAL PRIMARY KEY,
-    FirstName VARCHAR(50) NOT NULL,
-    LastName VARCHAR(50) NOT NULL,
-    Email VARCHAR(100) NOT NULL UNIQUE,
-    Password VARCHAR(255) NOT NULL,
-    Role VARCHAR(30) NOT NULL DEFAULT 'Moderator',
-    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
-    CreatedAt TIMESTAMP NOT NULL DEFAULT NOW(),
-    LastLoginAt TIMESTAMP
+CREATE TABLE admin (
+    adminid SERIAL PRIMARY KEY,
+    firstname VARCHAR(50) NOT NULL,
+    lastname VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(30) NOT NULL DEFAULT 'Moderator',
+    isactive BOOLEAN NOT NULL DEFAULT TRUE,
+    createdat TIMESTAMP NOT NULL DEFAULT NOW(),
+    lastloginat TIMESTAMP
 );
 
 -- ============================================
 -- PROVIDER
 -- ============================================
-CREATE TABLE Provider (
-    ProviderID SERIAL PRIMARY KEY,
-    CompanyName VARCHAR(100) NOT NULL,
-    Email VARCHAR(100) NOT NULL UNIQUE,
-    Phone VARCHAR(20),
-    Industry VARCHAR(100) NOT NULL,
-    Province VARCHAR(50) NOT NULL,
-    CreatedAt TIMESTAMP NOT NULL DEFAULT NOW(),
-    UpdatedAt TIMESTAMP NOT NULL DEFAULT NOW()
+CREATE TABLE provider (
+    providerid SERIAL PRIMARY KEY,
+    companyname VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    phone VARCHAR(20),
+    industry VARCHAR(100) NOT NULL,
+    province VARCHAR(50) NOT NULL,
+    createdat TIMESTAMP NOT NULL DEFAULT NOW(),
+    updatedat TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- ============================================
 -- PROFILE
 -- ============================================
-CREATE TABLE Profile (
-    ProfileID SERIAL PRIMARY KEY,
-    StudentID INT NOT NULL UNIQUE,
-    Institution VARCHAR(100) NOT NULL,
-    FieldOfStudy VARCHAR(100) NOT NULL,
-    YearLevel INT NOT NULL,
-    AcademicAverage DECIMAL(5,2) NOT NULL,
-    OpportunityPreference VARCHAR(50) NOT NULL,
-    Province VARCHAR(50) NOT NULL,
-    CreatedAt TIMESTAMP NOT NULL DEFAULT NOW(),
-    UpdatedAt TIMESTAMP NOT NULL DEFAULT NOW(),
+CREATE TABLE profile (
+    profileid SERIAL PRIMARY KEY,
+    studentid INT NOT NULL UNIQUE,
+    institution VARCHAR(100) NOT NULL,
+    fieldofstudy VARCHAR(100) NOT NULL,
+    yearlevel INT NOT NULL,
+    academicaverage DECIMAL(5,2) NOT NULL,
+    opportunitypreference VARCHAR(50) NOT NULL,
+    province VARCHAR(50) NOT NULL,
+    createdat TIMESTAMP NOT NULL DEFAULT NOW(),
+    updatedat TIMESTAMP NOT NULL DEFAULT NOW(),
 
     CONSTRAINT fk_profile_student
-        FOREIGN KEY (StudentID)
-        REFERENCES Student(StudentID)
+        FOREIGN KEY (studentid)
+        REFERENCES student(studentid)
         ON DELETE CASCADE
 );
 
 -- ============================================
 -- DOCUMENT
 -- ============================================
-CREATE TABLE Document (
-    DocumentID SERIAL PRIMARY KEY,
-    StudentID INT NOT NULL,
-    DocumentType VARCHAR(50) NOT NULL,
-    FileName VARCHAR(255) NOT NULL,
-    FileURL VARCHAR(500) NOT NULL,
-    FileSize INT NOT NULL,
-    UploadedAt TIMESTAMP NOT NULL DEFAULT NOW(),
-    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+CREATE TABLE document (
+    documentid SERIAL PRIMARY KEY,
+    studentid INT NOT NULL,
+    documenttype VARCHAR(50) NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    fileurl VARCHAR(500) NOT NULL,
+    filesize INT NOT NULL,
+    uploadedat TIMESTAMP NOT NULL DEFAULT NOW(),
+    isactive BOOLEAN NOT NULL DEFAULT TRUE,
 
     CONSTRAINT fk_document_student
-        FOREIGN KEY (StudentID)
-        REFERENCES Student(StudentID)
+        FOREIGN KEY (studentid)
+        REFERENCES student(studentid)
         ON DELETE CASCADE
 );
 
 -- ============================================
 -- OPPORTUNITY
 -- ============================================
-CREATE TABLE Opportunity (
-    OpportunityID SERIAL PRIMARY KEY,
-    ProviderID INT NOT NULL,
-    AdminID INT NOT NULL,
-    Title VARCHAR(150) NOT NULL,
-    OpportunityType VARCHAR(100) NOT NULL,
-    FieldOfStudy VARCHAR(100) NOT NULL,
-    MinimumAverage DECIMAL(5,2) NOT NULL,
-    YearLevelRequired INT NOT NULL,
-    EligibilityType VARCHAR(20) NOT NULL,
-    Province VARCHAR(50) NOT NULL,
-    Description TEXT NOT NULL,
-    ClosingDate DATE NOT NULL,
-    IsVerified BOOLEAN NOT NULL DEFAULT FALSE,
-    IsActive BOOLEAN NOT NULL DEFAULT FALSE,
-    PostedAt TIMESTAMP NOT NULL DEFAULT NOW(),
+CREATE TABLE opportunity (
+    opportunityid SERIAL PRIMARY KEY,
+    providerid INT NOT NULL,
+    adminid INT NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    opportunitytype VARCHAR(100) NOT NULL,
+    fieldofstudy VARCHAR(100) NOT NULL,
+    minimumaverage DECIMAL(5,2) NOT NULL,
+    yearlevelrequired INT NOT NULL,
+    eligibilitytype VARCHAR(20) NOT NULL,
+    province VARCHAR(50) NOT NULL,
+    description TEXT NOT NULL,
+    closingdate DATE NOT NULL,
+    isverified BOOLEAN NOT NULL DEFAULT FALSE,
+    isactive BOOLEAN NOT NULL DEFAULT FALSE,
+    postedat TIMESTAMP NOT NULL DEFAULT NOW(),
 
     CONSTRAINT fk_opportunity_provider
-        FOREIGN KEY (ProviderID)
-        REFERENCES Provider(ProviderID),
+        FOREIGN KEY (providerid)
+        REFERENCES provider(providerid),
 
     CONSTRAINT fk_opportunity_admin
-        FOREIGN KEY (AdminID)
-        REFERENCES Admin(AdminID)
+        FOREIGN KEY (adminid)
+        REFERENCES admin(adminid)
 );
 
 -- ============================================
 -- APPLICATION
 -- ============================================
-CREATE TABLE Application (
-    ApplicationID SERIAL PRIMARY KEY,
-    StudentID INT NOT NULL,
-    OpportunityID INT NOT NULL,
-    ReferenceNumber VARCHAR(50) NOT NULL UNIQUE,
-    Status VARCHAR(30) NOT NULL DEFAULT 'Submitted',
-    SubmittedAt TIMESTAMP NOT NULL DEFAULT NOW(),
-    ReviewedAt TIMESTAMP,
-    OutcomeReceivedAt TIMESTAMP,
-    OutcomeResult VARCHAR(20),
-    UpdatedAt TIMESTAMP NOT NULL DEFAULT NOW(),
+CREATE TABLE application (
+    applicationid SERIAL PRIMARY KEY,
+    studentid INT NOT NULL,
+    opportunityid INT NOT NULL,
+    referencenumber VARCHAR(50) NOT NULL UNIQUE,
+    status VARCHAR(30) NOT NULL DEFAULT 'Submitted',
+    submittedat TIMESTAMP NOT NULL DEFAULT NOW(),
+    reviewedat TIMESTAMP,
+    outcomereceivedat TIMESTAMP,
+    outcomeresult VARCHAR(20),
+    updatedat TIMESTAMP NOT NULL DEFAULT NOW(),
 
     CONSTRAINT fk_application_student
-        FOREIGN KEY (StudentID)
-        REFERENCES Student(StudentID)
+        FOREIGN KEY (studentid)
+        REFERENCES student(studentid)
         ON DELETE CASCADE,
 
     CONSTRAINT fk_application_opportunity
-        FOREIGN KEY (OpportunityID)
-        REFERENCES Opportunity(OpportunityID)
+        FOREIGN KEY (opportunityid)
+        REFERENCES opportunity(opportunityid)
         ON DELETE CASCADE,
 
     CONSTRAINT uq_student_application
-        UNIQUE(StudentID, OpportunityID)
+        UNIQUE(studentid, opportunityid)
 );
 
 -- ============================================
 -- BOOKMARK
 -- ============================================
-CREATE TABLE Bookmark (
-    BookmarkID SERIAL PRIMARY KEY,
-    StudentID INT NOT NULL,
-    OpportunityID INT NOT NULL,
-    SavedAt TIMESTAMP NOT NULL DEFAULT NOW(),
-    ReminderSent BOOLEAN NOT NULL DEFAULT FALSE,
+CREATE TABLE bookmark (
+    bookmarkid SERIAL PRIMARY KEY,
+    studentid INT NOT NULL,
+    opportunityid INT NOT NULL,
+    savedat TIMESTAMP NOT NULL DEFAULT NOW(),
+    remindersent BOOLEAN NOT NULL DEFAULT FALSE,
 
     CONSTRAINT fk_bookmark_student
-        FOREIGN KEY (StudentID)
-        REFERENCES Student(StudentID)
+        FOREIGN KEY (studentid)
+        REFERENCES student(studentid)
         ON DELETE CASCADE,
 
     CONSTRAINT fk_bookmark_opportunity
-        FOREIGN KEY (OpportunityID)
-        REFERENCES Opportunity(OpportunityID)
+        FOREIGN KEY (opportunityid)
+        REFERENCES opportunity(opportunityid)
         ON DELETE CASCADE,
 
     CONSTRAINT uq_student_bookmark
-        UNIQUE(StudentID, OpportunityID)
+        UNIQUE(studentid, opportunityid)
 );
 
 -- ============================================
 -- NOTIFICATION
 -- ============================================
-CREATE TABLE Notification (
-    NotificationID SERIAL PRIMARY KEY,
-    StudentID INT NOT NULL,
-    ApplicationID INT,
-    BookmarkID INT,
-    NotificationType VARCHAR(50) NOT NULL,
-    Channel VARCHAR(20) NOT NULL,
-    Message TEXT NOT NULL,
-    IsRead BOOLEAN NOT NULL DEFAULT FALSE,
-    SentAt TIMESTAMP NOT NULL DEFAULT NOW(),
+CREATE TABLE notification (
+    notificationid SERIAL PRIMARY KEY,
+    studentid INT NOT NULL,
+    applicationid INT,
+    bookmarkid INT,
+    notificationtype VARCHAR(50) NOT NULL,
+    channel VARCHAR(20) NOT NULL,
+    message TEXT NOT NULL,
+    isread BOOLEAN NOT NULL DEFAULT FALSE,
+    sentat TIMESTAMP NOT NULL DEFAULT NOW(),
 
     CONSTRAINT fk_notification_student
-        FOREIGN KEY (StudentID)
-        REFERENCES Student(StudentID)
+        FOREIGN KEY (studentid)
+        REFERENCES student(studentid)
         ON DELETE CASCADE,
 
     CONSTRAINT fk_notification_application
-        FOREIGN KEY (ApplicationID)
-        REFERENCES Application(ApplicationID)
+        FOREIGN KEY (applicationid)
+        REFERENCES application(applicationid)
         ON DELETE CASCADE,
 
     CONSTRAINT fk_notification_bookmark
-        FOREIGN KEY (BookmarkID)
-        REFERENCES Bookmark(BookmarkID)
+        FOREIGN KEY (bookmarkid)
+        REFERENCES bookmark(bookmarkid)
         ON DELETE CASCADE,
 
     CONSTRAINT chk_notification_reference
         CHECK (
             NOT (
-                ApplicationID IS NOT NULL
+                applicationid IS NOT NULL
                 AND
-                BookmarkID IS NOT NULL
+                bookmarkid IS NOT NULL
             )
         )
 );
