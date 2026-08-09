@@ -85,8 +85,8 @@ def get_student_profile(user) -> dict:
 def get_student_id(user) -> int:
     """
     Lightweight variant for the common case where a caller only needs the
-    student's own ID — e.g. to check "does this application/bookmark
-    belong to me?" for an IDOR/BOLA check (Rule 19) — without needing the
+    student's own ID e.g. to check "does this application/bookmark
+    belong to me?" for an IDOR/BOLA check (Rule 19) without needing the
     full profile.
     """
     if not user or not user.is_authenticated:
@@ -94,7 +94,7 @@ def get_student_id(user) -> int:
 
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT id FROM student WHERE auth_user_id = %s",
+            "SELECT id FROM student WHERE authuserid = %s",
             [user.id],
         )
         row = cursor.fetchone()
