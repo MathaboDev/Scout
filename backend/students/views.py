@@ -1,13 +1,11 @@
-from django.http import JsonResponse
+from rest_framework.decorators import api_view, throttle_classes
+from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 
+@api_view(["POST"])
+@throttle_classes([AnonRateThrottle])
 def register(request):
-    if request.method != "POST":
-        return JsonResponse(
-            {"error": "Only POST requests are allowed"},
-            status=405
-        )
-
-    return JsonResponse(
+    return Response(
         {"message": "Registration endpoint reached"},
         status=200
     )
