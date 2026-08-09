@@ -94,7 +94,7 @@ def get_student_id(user) -> int:
 
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT id FROM student WHERE auth_user_id = %s",
+            "SELECT studentid FROM student WHERE authuserid = %s",
             [user.id],
         )
         row = cursor.fetchone()
