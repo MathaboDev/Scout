@@ -1,7 +1,10 @@
 import React, { useState } from "react";
+import{ useNavigate} from "react-router-dom";
 import "./Register.css";
 
 export default function Register() {
+  const navigate = useNavigate();
+
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -100,7 +103,7 @@ export default function Register() {
           </div>
 
           {/* Create Account Button */}
-          <button type="submit" className="create-account-btn">
+          <button type="button" className="create-account-btn" onClick={() => navigate("/profile")}>
             Create account
           </button>
 

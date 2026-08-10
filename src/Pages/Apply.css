@@ -1,0 +1,717 @@
+/* ================================
+   APPLY PAGE
+================================ */
+
+.apply-page {
+  min-height: 100vh;
+  display: flex;
+  background: #f5f5f0;
+  color: #171717;
+  font-family: Arial, sans-serif;
+}
+
+
+/* ================================
+   SIDEBAR
+================================ */
+
+.apply-sidebar {
+  width: 230px;
+  min-height: 100vh;
+  background: #111114;
+  color: white;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  padding: 32px 18px 20px;
+  box-sizing: border-box;
+}
+
+.apply-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.apply-nav-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #d6d3d1;
+
+  text-align: left;
+
+  padding: 12px 13px;
+  border-radius: 9px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.apply-nav-item:hover {
+  background: #292929;
+  color: white;
+}
+
+.apply-nav-item.active {
+  background: #c6ff1a;
+  color: #111114;
+}
+
+.apply-sidebar-user {
+  border-top: 1px solid #292929;
+
+  padding-top: 18px;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.apply-user-circle {
+  width: 34px;
+  height: 34px;
+
+  border-radius: 50%;
+
+  background: #c6ff1a;
+  color: #111114;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.apply-user-name {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.apply-view-profile {
+  color: #a8a29e;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+
+/* ================================
+   MAIN CONTENT
+================================ */
+
+.apply-content {
+  flex: 1;
+  max-width: 1050px;
+
+  padding: 40px 55px 70px;
+  box-sizing: border-box;
+}
+
+
+/* Back button */
+
+.back-button {
+  border: none;
+  background: transparent;
+
+  color: #57534e;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  padding: 0;
+  margin-bottom: 25px;
+}
+
+.back-button:hover {
+  color: #111114;
+}
+
+
+/* Header */
+
+.apply-label {
+  margin: 0 0 8px;
+
+  color: #737373;
+
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.apply-header h1 {
+  margin: 0 0 8px;
+
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.apply-description {
+  margin: 0 0 28px;
+
+  color: #737373;
+
+  font-size: 14px;
+}
+
+
+/* ================================
+   CARDS
+================================ */
+
+.apply-card {
+  background: white;
+
+  border: 1px solid #e7e5e4;
+
+  border-radius: 15px;
+
+  padding: 24px;
+
+  margin-bottom: 18px;
+
+  box-sizing: border-box;
+}
+
+
+/* Job card */
+
+.apply-company-letter {
+  width: 48px;
+  height: 48px;
+
+  border-radius: 11px;
+
+  background: #f0eee7;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 17px;
+  font-weight: 800;
+
+  float: left;
+  margin-right: 15px;
+}
+
+.apply-job-info h2 {
+  margin: 0 0 5px;
+
+  font-size: 18px;
+}
+
+.apply-job-info p {
+  margin: 0 0 12px;
+
+  color: #737373;
+
+  font-size: 13px;
+}
+
+.apply-job-type {
+  display: inline-block;
+
+  padding: 5px 10px;
+
+  border-radius: 20px;
+
+  background: #c6ff1a;
+
+  color: #171717;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+
+/* ================================
+   SECTION HEADINGS
+================================ */
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  margin-bottom: 22px;
+}
+
+.section-heading h2 {
+  margin: 0 0 5px;
+
+  font-size: 17px;
+}
+
+.section-heading p {
+  margin: 0;
+
+  color: #737373;
+
+  font-size: 12px;
+}
+
+.edit-button {
+  border: 1px solid #d6d3d1;
+
+  background: white;
+
+  border-radius: 8px;
+
+  padding: 8px 13px;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.edit-button:hover {
+  background: #f5f5f0;
+}
+
+
+/* ================================
+   PROFILE REVIEW
+================================ */
+
+.profile-review-grid {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 20px 50px;
+}
+
+.review-item {
+  display: flex;
+  flex-direction: column;
+
+  gap: 5px;
+}
+
+.review-label {
+  color: #737373;
+
+  font-size: 11px;
+}
+
+.review-item strong {
+  font-size: 13px;
+}
+
+
+/* ================================
+   DOCUMENTS
+================================ */
+
+.document-review {
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+
+  padding: 14px 0;
+
+  border-top: 1px solid #eeeeeb;
+}
+
+.document-review:first-of-type {
+  border-top: none;
+}
+
+.document-icon {
+  width: 38px;
+  height: 38px;
+
+  border-radius: 8px;
+
+  background: #f0eee7;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.document-info {
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+
+  flex: 1;
+}
+
+.document-info strong {
+  font-size: 12px;
+}
+
+.document-info span {
+  color: #65a30d;
+
+  font-size: 10px;
+}
+
+.document-check {
+  color: #65a30d;
+
+  font-size: 18px;
+  font-weight: 800;
+}
+
+
+
+/* ================================
+   RESPONSIVE
+================================ */
+
+@media (max-width: 750px) {
+
+  .apply-page {
+    flex-direction: column;
+  }
+
+  .apply-sidebar {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .apply-sidebar-nav {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .apply-nav-item {
+    white-space: nowrap;
+  }
+
+  .apply-sidebar-user {
+    display: none;
+  }
+
+  .apply-content {
+    padding: 30px 20px 50px;
+  }
+
+  .profile-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .submit-area {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .submit-application {
+    width: 100%;
+  }
+}
+
+/* ================================
+   MISSING DOCUMENT WARNING
+================================ */
+
+.missing-document-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  background: #fff3d6;
+  border: 1px solid #f0d49a;
+  border-radius: 14px;
+
+  padding: 16px 20px;
+  margin-bottom: 18px;
+}
+
+.warning-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  font-size: 13px;
+  color: #44403c;
+}
+
+.warning-icon {
+  font-size: 17px;
+}
+
+.upload-now-button {
+  border: 1px solid #d6d3d1;
+  background: white;
+
+  border-radius: 20px;
+
+  padding: 9px 18px;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  white-space: nowrap;
+}
+
+.upload-now-button:hover {
+  background: #f5f5f0;
+}
+
+
+/* ================================
+   APPLICATION BUTTONS
+================================ */
+
+.edit-application-button {
+  border: 1px solid #d6d3d1;
+  background: white;
+
+  color: #171717;
+
+  border-radius: 9px;
+
+  padding: 13px 22px;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.edit-application-button:hover {
+  background: #f5f5f0;
+}
+
+.submit-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  margin-top: 25px;
+}
+
+.submit-application {
+  border: none;
+
+  background: #111114;
+  color: white;
+
+  border-radius: 9px;
+
+  padding: 13px 22px;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.submit-application:hover {
+  background: #292929;
+}
+
+/* =========================
+   APPLY PAGE FIXES
+========================= */
+
+.apply-content {
+  color: #111114;
+}
+
+.apply-header h1 {
+  color: #111114;
+}
+
+.apply-description {
+  color: #666;
+}
+
+.apply-label {
+  color: #111114;
+  font-weight: 700;
+}
+
+
+/* Missing document warning */
+
+.missing-document-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  background: #fff3d6;
+  border: 1px solid #f0d49a;
+  border-radius: 14px;
+
+  padding: 16px 20px;
+  margin-bottom: 18px;
+}
+
+.warning-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  color: #333;
+  font-size: 14px;
+}
+
+.warning-icon {
+  color: #a66a00;
+  font-size: 18px;
+}
+
+.upload-now-button {
+  background: white;
+  color: #111114;
+
+  border: 1px solid #d6d3d1;
+  border-radius: 20px;
+
+  padding: 9px 18px;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.upload-now-button:hover {
+  background: #f5f5f0;
+}
+
+
+/* Cards */
+
+.apply-card {
+  color: #111114;
+}
+
+.apply-card h2 {
+  color: #111114;
+}
+
+.apply-card p {
+  color: #666;
+}
+
+.apply-job-info h2 {
+  color: #111114;
+}
+
+
+/* Profile section */
+
+.section-heading h2 {
+  color: #111114;
+}
+
+.section-heading p {
+  color: #666;
+}
+
+.edit-button {
+  background: white;
+  color: #111114;
+
+  border: 1px solid #d6d3d1;
+  border-radius: 20px;
+
+  padding: 9px 18px;
+
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.edit-button:hover {
+  background: #f5f5f0;
+}
+
+
+/* Profile details */
+
+.review-label {
+  color: #666;
+}
+
+.review-item strong {
+  color: #111114;
+}
+
+
+/* Documents */
+
+.document-info strong {
+  color: #111114;
+}
+
+.document-info span {
+  color: #65a30d;
+}
+
+.document-check {
+  color: #65a30d;
+}
+
+
+/* Bottom buttons */
+
+.submit-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  margin-top: 25px;
+  margin-bottom: 30px;
+}
+
+.edit-application-button {
+  background: white;
+  color: #111114;
+
+  border: 1px solid #d6d3d1;
+  border-radius: 22px;
+
+  padding: 13px 22px;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.edit-application-button:hover {
+  background: #f5f5f0;
+}
+
+.submit-application {
+  background: #111114;
+  color: white;
+
+  border: none;
+  border-radius: 22px;
+
+  padding: 13px 24px;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.submit-application:hover {
+  background: #292929;
+}

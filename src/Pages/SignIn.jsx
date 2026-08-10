@@ -1,7 +1,10 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./SignIn.css";
 
 export default function SignIn() {
+  const navigate = useNavigate();
+
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -77,11 +80,10 @@ export default function SignIn() {
           </div>
 
           {/* Login Button */}
-          <button type="submit" className="login-button">
+          <button type="button" className="login-button" onClick={() =>navigate("/profile")}>
             Log in
           </button>
-
-        </form>
+</form>
 
         {/* Sign Up */}
         <p className="signup-text">
