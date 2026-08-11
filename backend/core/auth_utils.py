@@ -7,6 +7,28 @@ student's profile fetched from the database.
 Every view that needs eligibility-relevant data should use this module
 rather than trusting profile information supplied by the client.
 """
+"""
+Authentication and student lookup utilities for Scout.
+
+This module provides the central security boundary between Django
+authentication and Scout's Student/Profile database records.
+
+Flow:
+    Request
+        -> TokenAuthentication
+        -> request.user
+        -> authuserid in student table
+        -> studentid
+        -> profile
+
+The authenticated Django user is used to determine which Student record
+belongs to the request. Profile information is always retrieved from the
+database rather than being trusted from request data.
+
+Other endpoints that need to determine the current student should use
+these functions instead of accepting student IDs or profile information
+directly from the client.
+"""
 
 from django.db import connection
 from rest_framework.exceptions import NotFound, PermissionDenied
