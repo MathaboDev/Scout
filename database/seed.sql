@@ -487,4 +487,3 @@ VALUES
     'Your bookmarked opportunity is approaching its closing date.',
     TRUE
 );
-
