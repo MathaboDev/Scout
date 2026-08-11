@@ -75,7 +75,7 @@ INSTALLED_APPS = [
 
     # Scout apps
     "core",
-    "students",
+    "accounts",
     "opportunities",
     "applications",
     "notifications",
