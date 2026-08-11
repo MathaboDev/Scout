@@ -1,35 +1,31 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Landing from "./pages/Landing.jsx";
+import Login from "./pages/Login.jsx";
+import Register from "./pages/Register.jsx";
+import Profile from "./pages/Profile.jsx";
+import { useAuth } from "./context/AuthContext.jsx";
 
-import Landing from "./Pages/Landing";
-import SignIn from "./Pages/SignIn";
-import Register from "./Pages/Register";
-import Profile from "./Pages/Profile";
-import Eligible from "./Pages/Eligible";
-import Watchlist from "./Pages/Watchlist";
-import Apply from "./Pages/Apply";
-
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-
-        <Route path="/" element={<Landing />} />
-
-        <Route path="/signin" element={<SignIn />} />
-
-        <Route path="/register" element={<Register />} />
-
-        <Route path="/profile" element={<Profile />} />
-
-        <Route path="/eligible" element={<Eligible />} />
-
-        <Route path="/watchlist" element={<Watchlist />} />
-
-         <Route path="/apply" element={<Apply />} />
-
-      </Routes>
-    </BrowserRouter>
-  );
+function RequireAuth({ children }) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return children;
 }
 
-export default App;
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route
+        path="/profile"
+        element={
+          <RequireAuth>
+            <Profile />
+          </RequireAuth>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
