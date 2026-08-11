@@ -27,13 +27,10 @@ urlpatterns = [
     # students/ will likely wrap this with its own register/login views
     # (e.g. to also return profile-completion status), but this gives the
     # team a working auth endpoint to test against immediately.
-
-    #Authentication token endpoint
     path("api/auth/token/", obtain_auth_token, name="api-token-auth"),
 
     # Uncomment each line once that app has a urls.py:
-    #Student endpoints
-    path("api/students/", include("students.urls")),
+    # path("api/students/", include("students.urls")),
     # path("api/opportunities/", include("opportunities.urls")),
     # path("api/applications/", include("applications.urls")),
     # path("api/notifications/", include("notifications.urls")),
