@@ -12,8 +12,8 @@ const ENDPOINTS = {
   register: "/api/accounts/register/",
   login: "/api/accounts/login/",
   logout: "/api/accounts/logout/",
-  profile: "/api/accounts/profile/",
-  documents: "/api/accounts/documents/",
+ // profile: "/api/accounts/profile/",
+  documents: "/api/documents/upload/",
 };
 
 function getToken() {
@@ -41,7 +41,7 @@ async function request(path, { method = "GET", body, isFormData = false, auth = 
 
   if (!res.ok) {
     const message =
-      (data && (data.detail || data.message || firstFieldError(data))) ||
+      (data && (data.detail || data.message || data.error || firstFieldError(data))) ||
       `Request failed (${res.status})`;
     throw new Error(message);
   }

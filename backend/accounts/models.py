@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -19,6 +20,11 @@ class Student(models.Model):
         max_length=100,
         unique=True,
         db_column="email"
+    )
+    auth_user = models.OneToOneField(
+       settings.AUTH_USER_MODEL,
+       on_delete=models.CASCADE,
+       db_column="authuserid", 
     )
     password_hash = models.CharField(
         max_length=255,

@@ -17,9 +17,11 @@ class Document(models.Model):
 
    
     DOCUMENT_TYPES = [
+        ("cv", "CV"),
         ("matric_certificate", "Matric Certificate"),
         ("academic_transcript", "Academic Transcript"),
         ("proof_of_registration", "Proof of Registration"),
+        ("supporting_document", "Supporting Document"),
     ]
 
     document_id = models.AutoField(primary_key=True, db_column="documentid")

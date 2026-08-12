@@ -175,7 +175,10 @@ export default function Profile() {
     profile.studenttype === "Tertiary Student"
       ? "Tertiary Student"
       : profile.qualification || "Add your qualification below";
-  const fullName = user?.full_name || user?.name || "Your profile";
+  //const fullName = user?.full_name || user?.name || "Your profile";
+  const fullName = user
+  ? [user.first_name, user.last_name].filter(Boolean).join(" ") || "Your profile"
+  : "Your profile";
   const email = user?.email || "";
   const initials = fullName
     .split(" ")

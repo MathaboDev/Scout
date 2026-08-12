@@ -117,7 +117,8 @@ def register(request):
                 last_name=last_name,
             )
 
-            # Scout Student record
+            # Scout Student record, linked back to the auth user so
+            # auth_utils.py can look up this student from request.user
             Student.objects.create(
                 first_name=first_name,
                 last_name=last_name,
@@ -125,6 +126,7 @@ def register(request):
                 password_hash=make_password(password),
                 is_email_verified=False,
                 account_status="Active",
+                auth_user=user,
             )
 
     except Exception as error:
