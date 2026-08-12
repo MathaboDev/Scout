@@ -24,7 +24,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
 
     # DRF's built-in token endpoint: POST {username, password} -> {token}.
-    # students/ will likely wrap this with its own register/login views
+    # accounts/ will likely wrap this with its own register/login views
     # (e.g. to also return profile-completion status), but this gives the
     # team a working auth endpoint to test against immediately.
 
@@ -32,8 +32,8 @@ urlpatterns = [
     path("api/auth/token/", obtain_auth_token, name="api-token-auth"),
 
     # Uncomment each line once that app has a urls.py:
-    #Student endpoints
-    path("api/students/", include("students.urls")),
+    #Accounts endpoints
+    path("api/accounts/", include("accounts.urls")),
     # path("api/opportunities/", include("opportunities.urls")),
     # path("api/applications/", include("applications.urls")),
     # path("api/notifications/", include("notifications.urls")),
