@@ -1,0 +1,225 @@
+.register-page {
+  min-height: 100vh;
+  background-color: #f3f0e8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #11100f;
+}
+
+/* =========================
+   Register Card
+   ========================= */
+
+.register-card {
+  width: 100%;
+  max-width: 500px;
+  background-color: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+}
+
+/* =========================
+   Scout Logo
+   ========================= */
+
+.scout-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 42px;
+}
+
+.scout-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #baff00;
+
+  color: #11100f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: 900;
+  font-size: 18px;
+}
+
+.scout-brand span {
+  font-size: 20px;
+font-weight: 900;
+color: #11100f;
+}
+
+/* =========================
+   Heading
+   ========================= */
+
+.scout-heading{
+  text-align: center;
+  margin-bottom: 5px ;
+}
+
+.register-card h1 {
+  font-size:30px;
+  margin: 0 0 8px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  color: #151515;
+
+}
+
+.subtitle {
+  color: #777;
+  font-size: 16px;
+  line-height: 1.5;
+  margin-bottom: 35px;
+}
+
+/* =========================
+   Form
+   ========================= */
+
+.form-group {
+  margin-bottom: 25px;
+  
+}
+
+.form-group label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #111111;
+}
+
+.form-group input {
+  width: 100%;
+  height: 54px;
+
+  padding: 0 18px;
+
+  border: 1px solid #d9d6ce;
+  border-radius: 10px;
+
+  font-size: 16px;
+  background: #ffffff;
+
+  color: #333333;
+
+  box-sizing: border-box;
+  outline: none;
+}
+
+
+
+.form-group input:focus {
+  border-color: #151515;
+}
+
+/* =========================
+   Password Row
+   ========================= */
+
+.password-row {
+  display: flex;
+  gap: 18px;
+}
+
+.password-row .form-group {
+  flex: 1;
+}
+
+/* =========================
+   Create Account Button
+   ========================= */
+
+.create-account-btn {
+  width: 100%;
+  height: 58px;
+
+  margin-top: 5px;
+
+  border: none;
+  border-radius: 30px;
+
+  background-color: #151317;
+  color: white;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.create-account-btn:hover {
+  background-color: #29262a;
+}
+
+/* =========================
+   Verification Message
+   ========================= */
+
+.verification-message {
+  margin-top: 18px;
+
+  padding: 16px;
+
+  background-color: #eeece6;
+
+  border-radius: px;
+
+  color: #777;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Login */
+
+.login-text {
+  text-align: center;
+  margin: 20px 0 0;
+  
+  color: #8a8178;
+  font-size: 13px;
+}
+
+.login-link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #6f8200 !important;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.login-link:hover {
+  text-decoration: underline;
+}
+
+/* Mobile */
+
+@media (max-width: 500px) {
+
+  .register-card {
+    padding: 30px 24px;
+  }
+
+  .register-card h1 {
+    font-size: 28px;
+  }
+
+  .password-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .scout-brand {
+    margin-bottom: 32px;
+  }
+
+}
