@@ -27,24 +27,30 @@ User = get_user_model()
 @permission_classes([AllowAny])
 @throttle_classes([AnonRateThrottle])
 def register(request):
+
     full_name = request.data.get("full_name")
     email = request.data.get("email")
     password = request.data.get("password")
     confirm_password = request.data.get("confirm_password")
 
+    #========================
+    #Validate required fields
+    #========================
+
     if not full_name or not email or not password or not confirm_password:
         return Response(
             {
-                "error": (
-                    "full_name, email, password and "
-                    "confirm_password are required."
-                )
+                "error": "full_name, email, password and confirm_password are required."
             },
             status=status.HTTP_400_BAD_REQUEST,
         )
 
     full_name = full_name.strip()
     email = email.strip().lower()
+
+    # ========================
+    # Split full name
+    # ========================
 
     name_parts = full_name.split()
 
@@ -59,6 +65,10 @@ def register(request):
     first_name = name_parts[0]
     last_name = " ".join(name_parts[1:])
 
+    # ========================
+    # Check password match
+    # ========================
+
     if password != confirm_password:
         return Response(
             {
@@ -66,14 +76,23 @@ def register(request):
             },
             status=status.HTTP_400_BAD_REQUEST,
         )
+    
+    #========================
+    #Validate password length
+    #========================
 
     if len(password) < 10:
         return Response(
             {
                 "error": "Password must be at least 10 characters long."
             },
-            status=status.HTTP_400_BAD_REQUEST,
+            status=status.HTTP_400_BAD_REQUEST
         )
+
+     
+    #=========================
+    #Check for duplicate email
+    #=========================
 
     if User.objects.filter(username=email).exists():
         return Response(
@@ -91,9 +110,14 @@ def register(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    #=========================
+    #Create both records
+    #=========================
+
     try:
         with transaction.atomic():
 
+            # Django authentication user
             user = User.objects.create_user(
                 username=email,
                 email=email,
@@ -102,13 +126,15 @@ def register(request):
                 last_name=last_name,
             )
 
+            # Scout Student record, linked back to the auth user so
+            # auth_utils.py can look up this student from request.user
             Student.objects.create(
                 first_name=first_name,
                 last_name=last_name,
                 email=email,
                 password_hash=make_password(password),
                 is_email_verified=False,
-                account_status="active",
+                account_status="Active",
                 auth_user=user,
             )
 
@@ -138,8 +164,13 @@ def register(request):
 @permission_classes([AllowAny])
 @throttle_classes([AnonRateThrottle])
 def login(request):
+
     email = request.data.get("email")
     password = request.data.get("password")
+
+    # ========================
+    # Validate required fields
+    # ========================
 
     if not email or not password:
         return Response(
@@ -150,6 +181,10 @@ def login(request):
         )
 
     email = email.strip().lower()
+
+    # ========================
+    # Authenticate
+    # ========================
 
     user = authenticate(
         request=request,
@@ -165,7 +200,15 @@ def login(request):
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
+    # ========================
+    # Get/create authentication token
+    # ========================
+
     token, created = Token.objects.get_or_create(user=user)
+
+    # ========================
+    # Return frontend format
+    # ========================
 
     return Response(
         {
@@ -184,6 +227,7 @@ def login(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def logout(request):
+
     try:
         request.user.auth_token.delete()
     except Token.DoesNotExist:
@@ -196,88 +240,3 @@ def logout(request):
         status=status.HTTP_200_OK,
     )
 
-
-class StudentProfileView(APIView):
-    """
-    GET, POST and PUT for the authenticated student's profile.
-
-    The student ID is always obtained from request.user.
-    The client cannot choose another student's ID.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        profile = get_student_profile(request.user)
-
-        return Response(
-            {
-                "profile": profile
-            },
-            status=status.HTTP_200_OK,
-        )
-
-    def post(self, request):
-        student_id = get_student_id(request.user)
-
-        if Profile.objects.filter(student_id=student_id).exists():
-            return Response(
-                {
-                    "detail": (
-                        "Profile already exists. "
-                        "Use PUT to update it."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        serializer = StudentProfileSerializer(
-            data=request.data
-        )
-
-        serializer.is_valid(raise_exception=True)
-
-        profile = serializer.save(
-            student_id=student_id
-        )
-
-        return Response(
-            {
-                "profile": StudentProfileSerializer(profile).data
-            },
-            status=status.HTTP_201_CREATED,
-        )
-
-    def put(self, request):
-        student_id = get_student_id(request.user)
-
-        try:
-            profile = Profile.objects.get(
-                student_id=student_id
-            )
-        except Profile.DoesNotExist:
-            return Response(
-                {
-                    "detail": (
-                        "No profile found. "
-                        "Create your profile first."
-                    )
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        serializer = StudentProfileSerializer(
-            profile,
-            data=request.data,
-        )
-
-        serializer.is_valid(raise_exception=True)
-
-        profile = serializer.save()
-
-        return Response(
-            {
-                "profile": StudentProfileSerializer(profile).data
-            },
-            status=status.HTTP_200_OK,
-        )

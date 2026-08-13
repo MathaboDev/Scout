@@ -28,8 +28,7 @@ def get_student_profile(user) -> dict:
             """
             SELECT p.*
             FROM profile p
-            JOIN student s
-                ON s.studentid = p.studentid
+            JOIN student s ON s.studentid = p.studentid
             WHERE s.authuserid = %s
             """,
             [user.id],
@@ -57,11 +56,7 @@ def get_student_id(user) -> int:
 
     with connection.cursor() as cursor:
         cursor.execute(
-            """
-            SELECT studentid
-            FROM student
-            WHERE authuserid = %s
-            """,
+            "SELECT studentid FROM student WHERE authuserid = %s",
             [user.id],
         )
 
