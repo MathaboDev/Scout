@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.hashers import make_password
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -9,6 +10,7 @@ from rest_framework.decorators import (
     permission_classes,
     throttle_classes,
 )
+from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
@@ -240,3 +242,27 @@ def logout(request):
         status=status.HTTP_200_OK,
     )
 
+
+class ProfileView(RetrieveUpdateAPIView):
+    """
+    GET: return the authenticated student's profile (blank/unsaved
+    instance if they haven't created one yet).
+    PATCH: create (first save) or update the authenticated
+    student's profile.
+
+    The profile is looked up server-side via student.auth_user,
+    never trusted from the client (matches the eligibility-data
+    security rule used elsewhere in the app).
+    """
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = StudentProfileSerializer
+    http_method_names = ["get", "patch"]
+
+    def get_object(self):
+        student = get_object_or_404(Student, auth_user=self.request.user)
+
+        try:
+            return Profile.objects.get(student=student)
+        except Profile.DoesNotExist:
+            return Profile(student=student)

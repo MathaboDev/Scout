@@ -17,6 +17,18 @@ MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 VALID_DOCUMENT_TYPES = {choice[0] for choice in Document.DOCUMENT_TYPES}
 
 
+class DocumentListView(APIView):
+    """
+    GET /api/documents/
+    Returns the authenticated student's currently active documents
+    (CV, matric certificate, supporting docs).
+    """
+
+    def get(self, request):
+        student_id = get_student_id(request.user)
+        documents = Document.objects.filter(student_id=student_id, is_active=True)
+        return Response(DocumentSerializer(documents, many=True).data)
+
 class DocumentUploadView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
@@ -83,3 +95,5 @@ class DocumentSignedURLView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_502_BAD_GATEWAY)
 
         return Response({"signed_url": signed_url, "expires_in": 3600})
+
+  

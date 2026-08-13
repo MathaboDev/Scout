@@ -120,10 +120,12 @@ class Profile(models.Model):
 
     created_at = models.DateTimeField(
         db_column="createdat",
+        auto_now_add=True,
     )
 
     updated_at = models.DateTimeField(
         db_column="updatedat",
+        auto_now=True,
     )
 
     class Meta:

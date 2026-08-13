@@ -12,8 +12,9 @@ const ENDPOINTS = {
   register: "/api/accounts/register/",
   login: "/api/accounts/login/",
   logout: "/api/accounts/logout/",
- // profile: "/api/accounts/profile/",
+  profile: "/api/accounts/profile/",
   documents: "/api/documents/upload/",
+  documentsList: "/api/documents/",
 };
 
 function getToken() {
@@ -70,19 +71,20 @@ export const api = {
   getProfile() {
     return request(ENDPOINTS.profile, { method: "GET" });
   },
+
   updateProfile(profile) {
     const payload = {
-      studenttype: profile.studenttype,
+      student_type: profile.studenttype,
       institution: profile.institution,
-      fieldofstudy: profile.fieldofstudy,
-      academicaverage: profile.academicaverage === "" ? null : Number(profile.academicaverage),
-      opportunitypreference: profile.opportunitypreference,
+      field_of_study: profile.fieldofstudy,
+      academic_average: profile.academicaverage === "" ? null : Number(profile.academicaverage),
+      opportunity_preference: profile.opportunitypreference,
       province: profile.province || null,
-      yearlevel:
+      year_level:
         profile.studenttype === "Tertiary Student" && profile.yearlevel !== ""
           ? Number(profile.yearlevel)
           : null,
-      graduatetype:
+      graduate_type:
         profile.studenttype === "Graduate" ? profile.graduatetype || null : null,
       qualification:
         profile.studenttype === "Graduate" ? profile.qualification || null : null,
@@ -90,12 +92,17 @@ export const api = {
 
     return request(ENDPOINTS.profile, { method: "PATCH", body: payload });
   },
+
   uploadDocument(kind, file) {
     // kind: "cv" | "matric_certificate" | "supporting_document"
     const form = new FormData();
     form.append("document_type", kind);
     form.append("file", file);
     return request(ENDPOINTS.documents, { method: "POST", body: form, isFormData: true });
+  },
+
+  getDocuments() {
+    return request(ENDPOINTS.documentsList, { method: "GET" });
   },
 };
 

@@ -74,10 +74,9 @@ function normalizeProfile(data) {
     institution: source.institution ?? "",
     qualification: source.qualification ?? "",
     fieldofstudy: source.fieldofstudy ?? source.field_of_study ?? "",
-    yearlevel: source.yearlevel ?? source.year_of_study ?? "",
+    yearlevel: source.yearlevel ?? source.year_level ?? "",
     academicaverage: source.academicaverage ?? source.academic_average ?? "",
-    opportunitypreference:
-      source.opportunitypreference ?? source.opportunity_preference ?? "",
+    opportunitypreference: source.opportunitypreference ?? source.opportunity_preference ?? "",
     province: source.province ?? "",
     graduatetype: source.graduatetype ?? source.graduate_type ?? "",
   };
@@ -149,15 +148,18 @@ export default function Profile() {
   const [profile, setProfile] = useState(EMPTY_PROFILE);
   const [documents, setDocuments] = useState({ cv: null, matric_certificate: null, supporting_documents: [] });
 
-  useEffect(() => {
+    useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const data = await api.getProfile();
+        const [profileData, documentsData] = await Promise.all([
+          api.getProfile(),
+          api.getDocuments(),
+        ]);
         if (cancelled) return;
-        setProfile(normalizeProfile(data));
-        setDocuments(normalizeDocuments(data));
+        setProfile(normalizeProfile(profileData));
+        setDocuments(normalizeDocuments({ documents: documentsData }));
       } catch {
         if (!cancelled) setEditing(true);
       } finally {

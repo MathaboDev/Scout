@@ -4,10 +4,10 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
 
 const NAV = [
-  { key: "profile", label: "Profile", icon: User, active: true },
-  { key: "jobs", label: "Eligible jobs", icon: Briefcase, soon: true },
-  { key: "watchlist", label: "Watchlist", icon: Bookmark, soon: true },
-  { key: "settings", label: "Settings", icon: Settings, soon: true },
+  { key: "profile", label: "Scouter", icon: User, active: true },
+  { key: "jobs", label: "Scouted jobs", icon: Briefcase },
+  { key: "watchlist", label: "Watchlist", icon: Bookmark },
+  { key: "settings", label: "Settings", icon: Settings },
 ];
 
 export default function AppShell({ title, subtitle, children }) {
@@ -36,19 +36,11 @@ export default function AppShell({ title, subtitle, children }) {
               className={`flex items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-sm font-medium transition-colors ${
                 item.active
                   ? "bg-lime font-bold text-ink"
-                  : item.soon
-                  ? "cursor-default text-white/30"
                   : "text-white/70 hover:bg-ink-soft hover:text-white"
               }`}
-              title={item.soon ? "Coming soon" : undefined}
             >
               <item.icon size={17} />
               {item.label}
-              {item.soon && (
-                <span className="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide">
-                  Soon
-                </span>
-              )}
             </div>
           ))}
         </nav>
