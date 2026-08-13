@@ -1,33 +1,11 @@
 """
-core/auth_utils.py
+Scout authentication/profile helpers.
 
-The single place that turns an authenticated request into the current
-student's profile fetched from the database.
+These functions determine the authenticated Scout student from
+request.user and fetch data directly from the database.
 
-Every view that needs eligibility-relevant data should use this module
-rather than trusting profile information supplied by the client.
-"""
-"""
-Authentication and student lookup utilities for Scout.
-
-This module provides the central security boundary between Django
-authentication and Scout's Student/Profile database records.
-
-Flow:
-    Request
-        -> TokenAuthentication
-        -> request.user
-        -> authuserid in student table
-        -> studentid
-        -> profile
-
-The authenticated Django user is used to determine which Student record
-belongs to the request. Profile information is always retrieved from the
-database rather than being trusted from request data.
-
-Other endpoints that need to determine the current student should use
-these functions instead of accepting student IDs or profile information
-directly from the client.
+Views should never trust student/profile identity supplied by
+the client.
 """
 
 from django.db import connection
@@ -36,11 +14,10 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 
 def get_student_profile(user) -> dict:
     """
-    Return the authenticated student's profile from the database.
+    Return the authenticated student's profile.
 
-    Raises:
-        PermissionDenied: If the user is not authenticated.
-        NotFound: If the student does not have a profile yet.
+    The student is identified through student.authuserid,
+    which links the Scout student record to Django's auth_user.
     """
 
     if not user or not user.is_authenticated:
@@ -51,18 +28,20 @@ def get_student_profile(user) -> dict:
             """
             SELECT p.*
             FROM profile p
-            JOIN student s ON s.studentid = p.studentid
+            JOIN student s
+                ON s.studentid = p.studentid
             WHERE s.authuserid = %s
             """,
             [user.id],
         )
 
-        columns = [col[0] for col in cursor.description]
+        columns = [column[0] for column in cursor.description]
         row = cursor.fetchone()
 
     if row is None:
         raise NotFound(
-            "No profile found for this student. Complete profile setup first."
+            "No profile found for this student. "
+            "Complete profile setup first."
         )
 
     return dict(zip(columns, row))
@@ -70,7 +49,7 @@ def get_student_profile(user) -> dict:
 
 def get_student_id(user) -> int:
     """
-    Return the authenticated student's StudentID.
+    Return the authenticated student's Scout student ID.
     """
 
     if not user or not user.is_authenticated:
