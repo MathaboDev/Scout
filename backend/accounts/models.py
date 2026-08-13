@@ -51,3 +51,84 @@ class Student(models.Model):
     class Meta:
         managed = False
         db_table = "student"
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
+
+
+class Profile(models.Model):
+    profile_id = models.AutoField(
+        primary_key=True,
+        db_column="profileid",
+    )
+
+    student = models.OneToOneField(
+        Student,
+        on_delete=models.CASCADE,
+        db_column="studentid",
+        related_name="profile",
+    )
+
+    student_type = models.CharField(
+        max_length=30,
+        db_column="studenttype",
+    )
+
+    institution = models.CharField(
+        max_length=100,
+        db_column="institution",
+    )
+
+    field_of_study = models.CharField(
+        max_length=100,
+        db_column="fieldofstudy",
+    )
+
+    academic_average = models.FloatField(
+        db_column="academicaverage",
+    )
+
+    opportunity_preference = models.CharField(
+        max_length=50,
+        db_column="opportunitypreference",
+    )
+
+    province = models.CharField(
+        max_length=50,
+        db_column="province",
+    )
+
+    year_level = models.BigIntegerField(
+        null=True,
+        blank=True,
+        db_column="yearlevel",
+    )
+
+    graduate_type = models.CharField(
+        max_length=30,
+        null=True,
+        blank=True,
+        db_column="graduatetype",
+    )
+
+    qualification = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        db_column="qualification",
+    )
+
+    created_at = models.DateTimeField(
+        db_column="createdat",
+    )
+
+    updated_at = models.DateTimeField(
+        db_column="updatedat",
+    )
+
+    class Meta:
+        managed = False
+        db_table = "profile"
+
+    def __str__(self):
+        return f"Profile {self.profile_id}"

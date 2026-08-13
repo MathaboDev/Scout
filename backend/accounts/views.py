@@ -1,17 +1,27 @@
-from django.contrib.auth import get_user_model, authenticate
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.hashers import make_password
 from django.db import transaction
 
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from rest_framework.decorators import api_view, throttle_classes, permission_classes
+from rest_framework.decorators import (
+    api_view,
+    permission_classes,
+    throttle_classes,
+)
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.views import APIView
 
-from .models import Student
+from core.auth_utils import get_student_id, get_student_profile
+
+from .models import Profile, Student
+from .serializers import StudentProfileSerializer
+
 
 User = get_user_model()
+
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -89,10 +99,9 @@ def register(request):
             {
                 "error": "An account with this email already exists."
             },
-            status=status.HTTP_400_BAD_REQUEST
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
-    
     if Student.objects.filter(email=email).exists():
         return Response(
             {
