@@ -103,7 +103,7 @@ export default function Landing() {
             <p className="mt-5 max-w-md text-white/65">
               Scout builds one verified student profile and uses it to match,
               pre-fill, and track applications for internships, learnerships
-              and graduate programmes, so nothing gets missed and nothing
+              and graduate programmes. Nothing gets missed and nothing
               gets re-typed.
             </p>
             <div className="mt-8 flex flex-wrap gap-3.5">
@@ -203,11 +203,7 @@ export default function Landing() {
             Your profile only ever holds what an application needs
           </h2>
           <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted">
-            Scout profiles are professional information only: name, email,
-            field of study, institution, year level or qualification, academic
-            average, opportunity preference and province. ID numbers, home address, banking
-            details, health information, race and salary expectations are
-            explicitly excluded from the platform.
+            Scout profiles are professional information only.
           </p>
           <div className="mt-9 grid gap-5 sm:grid-cols-3">
             {PRIVACY_POINTS.map((p) => (
