@@ -1,0 +1,456 @@
+/* ================================
+   WATCHLIST PAGE
+================================ */
+
+.watchlist-page {
+  min-height: 100vh;
+  display: flex;
+  background: #f5f5f4;
+  color: #1c1917;
+  font-family: Arial, sans-serif;
+}
+
+
+/* ================================
+   SIDEBAR
+================================ */
+
+.watchlist-sidebar {
+  width: 255px;
+  min-height: 100vh;
+  background: #171717;
+  color: white;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+ flex-shrink: 0;
+}
+
+.scout-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+
+  background: #c6ff00;
+  color: #171717;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+
+  font-weight: 800;
+
+
+}
+
+.scout-name {
+  font-size: 18px;
+  font-weight: 800;
+  margin-left: 35px;
+}
+
+
+/* ================================
+   SIDEBAR NAVIGATION
+================================ */
+
+.watchlist-sidebar-nav {
+ margin-top: 18px;
+ padding: 0 12px;
+}
+
+.watchlist-nav-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+
+  color: #d6d6d6;
+
+  text-align: left;
+
+  padding: 18px;
+
+  border-radius: 10px;
+
+  font-size: 15px;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.watchlist-nav-item:hover {
+  background: #292524;
+  color: white;
+}
+
+.watchlist-nav-item.active {
+  background: #c6ff00;
+  color: #1c1917;
+}
+
+
+/* ================================
+   SIDEBAR USER
+================================ */
+
+.watchlist-sidebar-user {
+  border-top: 1px solid #292524;
+
+  padding-top: 18px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+}
+
+.watchlist-user-circle {
+  width: 34px;
+  height: 34px;
+
+  border-radius: 50%;
+
+  background: #c6ff00;
+  color: #1c1917;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.watchlist-user-name {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.watchlist-view-profile {
+  color: #a8a29e;
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+
+/* ================================
+   MAIN CONTENT
+================================ */
+
+.watchlist-content {
+  flex: 1;
+
+  padding: 45px 55px 60px;
+
+  max-width: 1100px;
+
+  box-sizing: border-box;
+}
+
+.watchlist-content h1 {
+  margin: 0 0 7px;
+
+  font-size: 28px;
+  font-weight: 800;
+  color: #171717;
+}
+
+.watchlist-description {
+  margin: 0 0 28px;
+
+  color: #78716c;
+
+  font-size: 14px;
+}
+
+
+/* ================================
+   SECTION HEADINGS
+================================ */
+
+.watchlist-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 16px;
+}
+
+.watchlist-section-heading h2 {
+  margin: 0;
+
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.view-all-button {
+  border: none;
+  background: transparent;
+
+  color: #57534e;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.view-all-button:hover {
+  color: #1c1917;
+}
+
+
+/* ================================
+   APPLIED JOBS
+================================ */
+
+.applied-jobs-grid {
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 16px;
+}
+
+.applied-job-card {
+  background: white;
+
+  border-radius: 14px;
+
+  padding: 18px;
+
+  min-height: 160px;
+
+  box-sizing: border-box;
+
+  box-shadow: 0 2px 8px rgba(28, 25, 23, 0.05);
+}
+
+.job-card-top {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 11px;
+}
+
+.watchlist-company-letter {
+  width: 36px;
+  height: 36px;
+
+  border-radius: 9px;
+
+  background: #f5f5f4;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  flex-shrink: 0;
+}
+
+.job-card-top h3 {
+  margin: 0 0 4px;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.job-card-top p {
+  margin: 0;
+
+  color: #78716c;
+
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.application-date {
+  margin: 17px 0 10px;
+
+  color: #78716c;
+
+  font-size: 10px;
+}
+
+.application-status {
+  display: inline-block;
+
+  padding: 5px 9px;
+
+  border-radius: 20px;
+
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.application-status.under-review {
+  background: #bef264;
+  color: #1c1917;
+}
+
+.application-status.outcome {
+  background: #e7e5e4;
+  color: #57534e;
+}
+
+.application-status.submitted {
+  background: #e7e5e4;
+  color: #57534e;
+}
+
+
+/* ================================
+   BOOKMARKED SECTION
+================================ */
+
+.bookmarked-section {
+  margin-top: 38px;
+}
+
+.bookmarked-jobs-grid {
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 16px;
+}
+
+.bookmarked-job-card {
+  background: white;
+
+  border-radius: 14px;
+
+  padding: 18px;
+
+  min-height: 170px;
+
+  box-sizing: border-box;
+
+  box-shadow: 0 2px 8px rgba(28, 25, 23, 0.05);
+}
+
+.job-type-badge {
+  display: inline-block;
+
+  margin-top: 18px;
+
+  padding: 5px 9px;
+
+  border-radius: 20px;
+
+  background: #bef264;
+
+  color: #1c1917;
+
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.closing-date {
+  margin: 13px 0 0;
+
+  color: #78716c;
+
+  font-size: 10px;
+}
+
+.closing-date.urgent {
+  color: #65a30d;
+
+  font-weight: 800;
+}
+
+.watchlist-apply-button {
+  width: 100%;
+  padding: 12px 20px;
+  margin-top: 15px;
+  border: none;
+  border-radius: 25px;
+  background-color: #151317;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.watchlist-apply-button:hover {
+  background-color: #29262a;
+}
+
+.watchlist-remove-button {
+    width: 100%;
+  margin-top: 6px;
+  padding: 5px 0;
+  border: none;
+  background: transparent;
+  color: #111111;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.watchlist-remove-button:hover {
+  text-decoration: underline;
+}
+
+/* ================================
+   RESPONSIVE DESIGN
+================================ */
+
+@media (max-width: 850px) {
+
+  .watchlist-content {
+    padding: 35px 30px;
+  }
+
+  .applied-jobs-grid,
+  .bookmarked-jobs-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .watchlist-page {
+    flex-direction: column;
+  }
+
+  .watchlist-sidebar {
+    width: 100%;
+    min-height: auto;
+
+    padding: 20px;
+  }
+
+  .watchlist-sidebar-nav {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .watchlist-nav-item {
+    white-space: nowrap;
+  }
+
+  .watchlist-sidebar-user {
+    display: none;
+  }
+
+  .watchlist-content {
+    padding: 30px 20px;
+  }
+
+  .applied-jobs-grid,
+  .bookmarked-jobs-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
