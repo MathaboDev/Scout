@@ -34,7 +34,7 @@ urlpatterns = [
     # Uncomment each line once that app has a urls.py:
      path("api/accounts/", include("accounts.urls")),
     # path("api/opportunities/", include("opportunities.urls")),
-    # path("api/applications/", include("applications.urls")),
+    path("api/applications/", include("applications.urls")),
     # path("api/notifications/", include("notifications.urls")),
     # path("api/providers-admin/", include("providers_admin.urls")),
     path("api/", include("documents.urls")),
