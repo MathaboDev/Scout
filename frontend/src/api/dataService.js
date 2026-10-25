@@ -19,7 +19,7 @@ export function seedData() {
   if (!localStorage.getItem(STORAGE_KEYS.LISTINGS)) {
     const listings = [
       {
-        id: "L1",
+        id: "1",
         title: "Software developer intern",
         company: "ByteWorks",
         type: "Internship",
@@ -32,7 +32,7 @@ export function seedData() {
         status: "Open",
       },
       {
-        id: "L2",
+        id: "2",
         title: "Junior product manager",
         company: "ByteWorks",
         type: "Full-time",
@@ -45,7 +45,7 @@ export function seedData() {
         status: "Open",
       },
       {
-        id: "L3",
+        id: "3",
         title: "Data analyst intern",
         company: "ByteWorks",
         type: "Internship",
@@ -65,7 +65,7 @@ export function seedData() {
     const applicants = [
       {
         id: "A1",
-        listingId: "L1",
+        listingId: "1",
         studentName: "Tumelo Mahlangu",
         studentEmail: "tumelo.m@example.com",
         institution: "CPUT",
@@ -77,7 +77,7 @@ export function seedData() {
       },
       {
         id: "A2",
-        listingId: "L1",
+        listingId: "1",
         studentName: "Aisha Ndlovu",
         studentEmail: "aisha.n@example.com",
         institution: "UCT",
@@ -89,7 +89,7 @@ export function seedData() {
       },
       {
         id: "A3",
-        listingId: "L1",
+        listingId: "1",
         studentName: "Sipho Khumalo",
         studentEmail: "sipho.k@example.com",
         institution: "CPUT",
@@ -101,7 +101,7 @@ export function seedData() {
       },
       {
         id: "A4",
-        listingId: "L2",
+        listingId: "2",
         studentName: "Naledi Dube",
         studentEmail: "naledi.d@example.com",
         institution: "Wits",
@@ -113,7 +113,7 @@ export function seedData() {
       },
       {
         id: "A5",
-        listingId: "L3",
+        listingId: "3",
         studentName: "Karabo Molefe",
         studentEmail: "karabo.m@example.com",
         institution: "CPUT",

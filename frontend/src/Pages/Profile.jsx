@@ -13,7 +13,7 @@ import FormField from "../components/FormField.jsx";
 import Button from "../components/Button.jsx";
 import { api } from "../lib/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import Sidebar from "../components/SideBar.jsx";
+
 
 
 const FIELD_OF_STUDY_OPTIONS = [

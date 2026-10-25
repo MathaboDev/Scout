@@ -22,77 +22,114 @@ export default function Dashboard() {
   const pendingCount = applicants.filter((a) => a.status === "Submitted").length;
 
   return (
-    <div className="sp-app">
+    // h-screen and overflow-hidden locks the page size
+    <div className="flex h-screen w-full bg-cream overflow-hidden font-sans">
+      
+      {/* The Sidebar sits on the left */}
       <Sidebar active="dashboard" />
 
-      <div className="sp-main">
-        <div className="sp-main-head">
+      {/* flex-1 pushes the main content into the gap on the right */}
+      <main className="flex-1 h-full overflow-y-auto p-6 lg:p-10">
+        
+        {/* Header */}
+        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <h1>Welcome back, ByteWorks </h1>
-            <p>Here's an overview of your listings and applicants.</p>
+            <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+              Welcome back, ByteWorks
+            </h1>
+            <p className="mt-1 text-sm text-muted">
+              Here's an overview of your listings and applicants.
+            </p>
           </div>
-          <Link className="sp-btn sp-btn-lime" to="/post-listing">
-            <i className="ti ti-plus"></i> Post a listing
+          <Link
+            to="/post-listing"
+            className="inline-flex items-center justify-center gap-2 rounded-xl2 bg-lime px-5 py-2.5 text-sm font-semibold text-ink-soft transition hover:opacity-90"
+          >
+            <i className="ti ti-plus text-lg" /> Post a listing
           </Link>
         </div>
 
-        <div className="sp-stat-grid">
-          <div className="sp-stat-card">
-            <div className="sp-num">{activeCount}</div>
-            <div className="sp-label">Active listings</div>
+        {/* Stats Grid */}
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="rounded-xl2 border border-line bg-white p-6 shadow-sm">
+            <div className="text-3xl font-bold text-ink">{activeCount}</div>
+            <div className="mt-1 text-sm font-medium text-muted">Active listings</div>
           </div>
-          <div className="sp-stat-card">
-            <div className="sp-num">{applicants.length}</div>
-            <div className="sp-label">Total applicants</div>
+          <div className="rounded-xl2 border border-line bg-white p-6 shadow-sm">
+            <div className="text-3xl font-bold text-ink">{applicants.length}</div>
+            <div className="mt-1 text-sm font-medium text-muted">Total applicants</div>
           </div>
-          <div className="sp-stat-card">
-            <div className="sp-num">{pendingCount}</div>
-            <div className="sp-label">Awaiting review</div>
+          <div className="rounded-xl2 border border-line bg-white p-6 shadow-sm">
+            <div className="text-3xl font-bold text-ink">{pendingCount}</div>
+            <div className="mt-1 text-sm font-medium text-muted">Awaiting review</div>
           </div>
         </div>
 
-        <h3 style={{ marginBottom: 14 }}>Your listings</h3>
+        <h3 className="mb-4 text-lg font-semibold text-ink">Your listings</h3>
 
         {listings.length === 0 ? (
-          <div className="sp-empty-state">
+          <div className="rounded-xl2 border border-line bg-white p-8 text-center text-muted shadow-sm">
             You haven't posted any listings yet.{" "}
-            <Link to="/post-listing" style={{ fontWeight: 700, color: "var(--lime-ink)" }}>
+            <Link to="/post-listing" className="font-semibold text-lime-ink hover:underline">
               Post your first one
-            </Link>
-            .
+            </Link>.
           </div>
         ) : (
-          <div className="sp-listing-grid">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             {listings.map((listing) => {
               const count = getApplicantsForListing(listing.id).length;
               return (
-                <div className="sp-listing-card" key={listing.id}>
-                  <div className="sp-listing-top">
-                    <div>
-                      <div className="sp-listing-title">{listing.title}</div>
-                      <div className="sp-listing-sub">
-                        {listing.company} · {listing.location}
+                <div
+                  key={listing.id}
+                  className="flex flex-col justify-between rounded-xl2 border border-line bg-white p-6 shadow-sm transition hover:shadow-md"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-lg font-bold text-ink">{listing.title}</div>
+                        <div className="mt-1 text-sm text-muted">
+                          {listing.company} · {listing.location}
+                        </div>
                       </div>
+                      
+                      {/* Status Pill using your custom colors */}
+                      <span
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                          listing.status === "Open"
+                            ? "bg-green-bg text-green"
+                            : "bg-gray-bg text-muted"
+                        }`}
+                      >
+                        {listing.status}
+                      </span>
                     </div>
-                    <span
-                      className={`sp-status-pill ${
-                        listing.status === "Open" ? "sp-status-accepted" : "sp-status-submitted"
-                      }`}
+
+                    <div className="mt-4 text-xs text-muted">
+                      Posted {listing.postedDate} · Closes {listing.closingDate}
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-3">
+                      {/* Tag using your custom lime color */}
+                      <span
+                        className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${
+                          listing.type === "Internship"
+                            ? "bg-lime text-lime-ink"
+                            : "bg-gray-bg text-ink-soft"
+                        }`}
+                      >
+                        {listing.type}
+                      </span>
+                      <span className="text-sm font-medium text-muted">
+                        {count} applicant{count === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <Link
+                      to={`/view-applicants/${listing.id}`}
+                      className="block w-full rounded-xl2 bg-ink py-2.5 text-center text-sm font-semibold text-white transition hover:bg-ink-soft"
                     >
-                      {listing.status}
-                    </span>
-                  </div>
-                  <div className="sp-listing-meta">
-                    Posted {listing.postedDate} · Closes {listing.closingDate}
-                  </div>
-                  <span className={listing.type === "Internship" ? "sp-tag sp-tag-lime" : "sp-tag"}>
-                    {listing.type}
-                  </span>
-                  <div className="sp-applicant-count">
-                    {count} applicant{count === 1 ? "" : "s"}
-                  </div>
-                  <div className="sp-listing-actions">
-                    <Link className="sp-btn sp-btn-dark" to={`/view-applicants/${listing.id}`}>
                       View applicants
                     </Link>
                   </div>
@@ -101,7 +138,7 @@ export default function Dashboard() {
             })}
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
