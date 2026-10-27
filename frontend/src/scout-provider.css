@@ -1,11 +1,3 @@
-/*
-  Scoped styles for the scouter/provider side.
-  Everything lives under .scout-provider-app so it won't clash with
-  whatever global CSS your teammates already have in the project.
-  Wrap your routed pages in a <div className="scout-provider-app"> — App.js
-  already does this for you.
-*/
-
 .scout-provider-app{
   --ink:#101014;
   --cream:#F5F3EC;
@@ -33,7 +25,6 @@
 .scout-provider-app h2,
 .scout-provider-app h3{font-family:'Space Grotesk',sans-serif;font-weight:700;}
 
-/* ---------- APP SHELL ---------- */
 .scout-provider-app .sp-app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
 .scout-provider-app .sp-sidebar{background:var(--ink);color:var(--white);padding:28px 20px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
 .scout-provider-app .sp-logo{display:flex;align-items:center;gap:10px;}
@@ -54,7 +45,6 @@
 .scout-provider-app .sp-main-head h1{font-size:26px;}
 .scout-provider-app .sp-main-head p{color:var(--muted);font-size:13px;margin-top:6px;}
 
-/* ---------- BUTTONS ---------- */
 .scout-provider-app .sp-btn{
   font-family:'Inter';font-weight:700;font-size:14px;
   padding:12px 22px;border-radius:100px;border:none;cursor:pointer;
@@ -67,20 +57,19 @@
 .scout-provider-app .sp-btn-outline:hover{background:var(--ink);color:var(--white);border-color:var(--ink);}
 .scout-provider-app .sp-btn-dark{background:var(--ink);color:var(--white);}
 .scout-provider-app .sp-btn-dark:hover{background:#2A2A30;transform:translateY(-1px);}
+.scout-provider-app .sp-btn-danger{background:transparent;border:1.5px solid var(--red-bg);color:var(--red);}
+.scout-provider-app .sp-btn-danger:hover{background:var(--red-bg);}
 .scout-provider-app .sp-btn-sm{padding:8px 16px;font-size:12.5px;}
 .scout-provider-app .sp-btn[disabled]{opacity:.5;cursor:not-allowed;}
 
-/* ---------- CARDS ---------- */
 .scout-provider-app .sp-card{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin-bottom:18px;}
 .scout-provider-app .sp-card h3{font-size:15px;margin-bottom:16px;}
 
-/* ---------- STAT CARDS ---------- */
 .scout-provider-app .sp-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
 .scout-provider-app .sp-stat-card{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:20px 22px;}
 .scout-provider-app .sp-stat-card .sp-num{font-family:'Space Grotesk';font-size:30px;font-weight:700;}
 .scout-provider-app .sp-stat-card .sp-label{color:var(--muted);font-size:12.5px;margin-top:4px;}
 
-/* ---------- LISTING CARDS ---------- */
 .scout-provider-app .sp-listing-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .scout-provider-app .sp-listing-card{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:20px;}
 .scout-provider-app .sp-listing-top{display:flex;justify-content:space-between;align-items:flex-start;}
@@ -93,7 +82,6 @@
 .scout-provider-app .sp-listing-actions .sp-btn{flex:1;justify-content:center;}
 .scout-provider-app .sp-applicant-count{font-size:12px;font-weight:700;color:var(--lime-ink);margin-top:10px;}
 
-/* ---------- FORMS ---------- */
 .scout-provider-app .sp-form-group{margin-bottom:18px;}
 .scout-provider-app .sp-form-group label{display:block;font-size:12px;font-weight:600;margin-bottom:6px;}
 .scout-provider-app .sp-form-group .sp-hint{font-size:11.5px;color:var(--muted);margin-top:5px;}
@@ -110,7 +98,6 @@
 .scout-provider-app .sp-row2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .scout-provider-app .sp-form-actions{display:flex;gap:12px;margin-top:8px;}
 
-/* ---------- TABLE ---------- */
 .scout-provider-app .sp-table-wrap{overflow-x:auto;}
 .scout-provider-app table.sp-applicants{width:100%;border-collapse:collapse;font-size:13px;}
 .scout-provider-app table.sp-applicants th{text-align:left;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;
@@ -127,8 +114,8 @@
 .scout-provider-app .sp-status-interview{background:#E7EEF9;color:#2F5FA0;}
 .scout-provider-app .sp-status-accepted{background:var(--green-bg);color:#3F7A33;}
 .scout-provider-app .sp-status-rejected{background:var(--red-bg);color:var(--red);}
+.scout-provider-app .sp-status-outcome{background:#E7EEF9;color:#2F5FA0;}
 
-/* ---------- APPLICANT DETAILS ---------- */
 .scout-provider-app .sp-kv{display:grid;grid-template-columns:1fr 1fr;gap:14px 24px;font-size:13px;}
 .scout-provider-app .sp-kv .sp-k{color:var(--muted);font-size:11.5px;font-weight:600;margin-bottom:3px;}
 .scout-provider-app .sp-kv .sp-v{font-weight:600;}
@@ -140,10 +127,12 @@
 .scout-provider-app .sp-status-update-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
 .scout-provider-app .sp-status-update-bar select{border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-family:'Inter';font-size:13.5px;}
 
-/* ---------- TOAST ---------- */
 .scout-provider-app .sp-toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--white);padding:14px 20px;border-radius:10px;
   font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.2);z-index:50;}
 
 .scout-provider-app .sp-back-link{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:16px;cursor:pointer;background:none;border:none;padding:0;}
 .scout-provider-app .sp-back-link:hover{color:var(--ink);}
 .scout-provider-app .sp-empty-state{text-align:center;padding:60px 20px;color:var(--muted);font-size:13.5px;}
+
+.scout-provider-app .sp-alert{background:var(--red-bg);color:var(--red);border-radius:10px;padding:12px 14px;font-size:12.5px;font-weight:600;margin-bottom:18px;}
+.scout-provider-app .sp-log-time{color:var(--muted);font-size:12px;}
