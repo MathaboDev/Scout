@@ -14,6 +14,8 @@ import Button from "../components/Button.jsx";
 import { api } from "../lib/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
 
+
+
 const FIELD_OF_STUDY_OPTIONS = [
   "Information Technology",
   "Computer Science",
@@ -32,11 +34,11 @@ const PROVINCE_OPTIONS = [
   "Free State",
   "Gauteng",
   "KwaZulu-Natal",
-  "Limpopo",
   "Mpumalanga",
   "Northern Cape",
   "North West",
   "Western Cape",
+  "Limpopo",
 ];
 
 const YEAR_OPTIONS = [1, 2, 3, 4, 5, 6];
@@ -45,7 +47,7 @@ const STUDENT_TYPE_OPTIONS = ["Tertiary Student", "Graduate"];
 const GRADUATE_TYPE_OPTIONS = ["Undergraduate", "Postgraduate"];
 
 const QUALIFICATION_OPTIONS = {
-  Undergraduate: ["Higher Certificate", "Diploma", "Bachelor"],
+  Undergraduate: ["Higher Certificate", "Diploma", "Bachelor Degree"],
   Postgraduate: ["Honours", "Masters", "Doctorate"],
 };
 
@@ -283,6 +285,8 @@ export default function Profile() {
   }
 
   return (
+  
+
     <AppShell
       title="Profile"
       subtitle="Keep your professional information up to date so Scout can use it when matching opportunities."
@@ -561,6 +565,7 @@ export default function Profile() {
         </p>
       )}
     </AppShell>
+   
   );
 }
 
@@ -591,7 +596,8 @@ function DocumentRow({ doc, state, onUpload }) {
         </label>
       </div>
     </div>
-  );
+    
+      );
 }
 
 function DocStatus({ state }) {

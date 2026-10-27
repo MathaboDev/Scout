@@ -1,5 +1,5 @@
 import React from "react";
-import { statusBadgeClass } from "../data/dataService";
+import { statusBadgeClass } from "../api/dataService.js";
 
 export default function StatusBadge({ status }) {
   return (
