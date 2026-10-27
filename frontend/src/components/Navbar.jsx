@@ -46,6 +46,12 @@ export default function Navbar() {
           </a>
         ))}
         <Link
+          to="/login?as=provider"
+          className="hidden rounded-md px-4 py-2 text-[12.5px] font-medium uppercase tracking-[0.14em] text-ink/80 transition-colors hover:text-ink lg:inline-block"
+        >
+          For providers
+        </Link>
+        <Link
           to="/login"
           className="rounded-md px-3 py-2 text-[12.5px] font-medium uppercase tracking-[0.14em] text-ink/80 transition-colors hover:text-ink sm:px-4"
         >

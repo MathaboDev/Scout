@@ -28,7 +28,10 @@ from accounts.models import Profile, Student
 from opportunities.models import Opportunity
 from providers_admin.models import PlatformAdmin, Provider
 
-from ._demo_catalogue import PROVIDERS, STUDENTS
+from applications.models import Application
+from core.choices import STATUS_OUTCOME_RECEIVED, STATUS_SUBMITTED
+
+from ._demo_catalogue import DEMO_APPLICANTS, PROVIDERS, STUDENTS
 
 User = get_user_model()
 DEMO_PASSWORD = "ScoutDemo-2026"
@@ -201,6 +204,29 @@ class Command(BaseCommand):
                 )
                 created += int(was_created)
 
+        # Demo applicants for the ByteWorks provider screens, one per status
+        new_apps = 0
+        for i, item in enumerate(DEMO_APPLICANTS, start=1):
+            student = _student(item["email"], item["first_name"], item["last_name"], item["profile"])
+            title, status, outcome, days_ago = item["application"]
+            opp = Opportunity.objects.get(provider_id=provider.provider_id, title=title)
+            submitted = now - timedelta(days=days_ago)
+            reviewed = submitted + timedelta(days=2) if status != STATUS_SUBMITTED else None
+            _, was_created = Application.objects.get_or_create(
+                student_id=student.student_id,
+                opportunity_id=opp.opportunity_id,
+                defaults={
+                    "reference_number": f"SCOUT-DEMO{i:05d}",
+                    "status": status,
+                    "outcome_result": outcome,
+                    "submitted_at": submitted,
+                    "reviewed_at": reviewed,
+                    "outcome_received_at": now - timedelta(days=1) if status == STATUS_OUTCOME_RECEIVED else None,
+                },
+            )
+            new_apps += int(was_created)
+
+        self.stdout.write(self.style.SUCCESS(f"{new_apps} new demo applicant(s) for ByteWorks."))
         self.stdout.write(self.style.SUCCESS(
             f"Demo ready. {created} new listing(s).\n"
             f"  Student : student@scout.demo / {DEMO_PASSWORD}\n"

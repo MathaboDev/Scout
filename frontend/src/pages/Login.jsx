@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import AuthLayout from "../components/AuthLayout.jsx";
 import Button from "../components/Button.jsx";
@@ -19,6 +19,9 @@ function destinationFor(role, from) {
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  // Opened from a "For providers" link (/login?as=provider): same form and
+  // same login, only the wording changes. The role still comes from the server.
+  const asProvider = new URLSearchParams(location.search).get("as") === "provider";
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,11 +47,19 @@ export default function Login() {
   return (
     <AuthLayout
       current="login"
-      headline="Good to see you again."
-      blurb="Pick up where you left off: new matches, saved listings and live application statuses."
-      tag="Log in"
+      headline={asProvider ? "Find the students who fit." : "Good to see you again."}
+      blurb={
+        asProvider
+          ? "See your listings, review applicants and update their status in one place."
+          : "Pick up where you left off: new matches, saved listings and live application statuses."
+      }
+      tag={asProvider ? "Provider log in" : "Log in"}
       title="Welcome back"
-      subtitle="Students and providers both sign in here."
+      subtitle={
+        asProvider
+          ? "Log in with the company account Scout set up for you."
+          : "Students and providers both sign in here."
+      }
     >
       <form onSubmit={handleSubmit} noValidate>
 

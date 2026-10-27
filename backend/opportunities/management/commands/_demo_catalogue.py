@@ -213,3 +213,54 @@ STUDENTS = [
         },
     },
 ]
+
+
+# Demo applicants for the PROVIDER screens (ByteWorks, provider@byteworks.demo),
+# one at every stage so the dashboard, applicant list and status flow have
+# something to show. Each tuple: listing title, status, outcome, days since
+# applied. Statuses must match core/choices.py.
+_IT_STUDENT = {
+    "student_type": "Tertiary Student",
+    "field_of_study": "Information Technology",
+    "opportunity_preference": "Internship",
+}
+DEMO_APPLICANTS = [
+    {
+        "email": "lerato.nkosi@scout.demo", "first_name": "Lerato", "last_name": "Nkosi",
+        "profile": {**_IT_STUDENT, "institution": "University of Cape Town", "academic_average": 78,
+                    "province": "Western Cape", "year_level": 3},
+        "application": ("Software developer intern", "Under Review", None, 6),
+    },
+    {
+        "email": "thabo.mokoena@scout.demo", "first_name": "Thabo", "last_name": "Mokoena",
+        "profile": {**_IT_STUDENT, "institution": "Tshwane University of Technology", "academic_average": 69,
+                    "province": "Gauteng", "year_level": 2},
+        "application": ("Software developer intern", "Submitted", None, 1),
+    },
+    {
+        "email": "ayesha.patel@scout.demo", "first_name": "Ayesha", "last_name": "Patel",
+        "profile": {**_IT_STUDENT, "institution": "Stellenbosch University", "academic_average": 84,
+                    "province": "Western Cape", "year_level": 3},
+        "application": ("Cloud engineering intern", "Outcome Received", "Successful", 14),
+    },
+    {
+        "email": "sibusiso.zulu@scout.demo", "first_name": "Sibusiso", "last_name": "Zulu",
+        "profile": {**_IT_STUDENT, "institution": "Cape Peninsula University of Technology", "academic_average": 71,
+                    "province": "Western Cape", "year_level": 2},
+        "application": ("IT support intern", "Outcome Received", "Unsuccessful", 10),
+    },
+    {
+        "email": "kagiso.molefe@scout.demo", "first_name": "Kagiso", "last_name": "Molefe",
+        "profile": {"student_type": "Graduate", "graduate_type": "Undergraduate", "qualification": "Bachelor",
+                    "field_of_study": "Information Technology", "opportunity_preference": "Graduate programme",
+                    "institution": "University of the Witwatersrand", "academic_average": 74, "province": "Gauteng"},
+        "application": ("Graduate developer programme", "Under Review", None, 8),
+    },
+    {
+        "email": "zanele.mthembu@scout.demo", "first_name": "Zanele", "last_name": "Mthembu",
+        "profile": {"student_type": "Tertiary Student", "field_of_study": "Computer Science",
+                    "opportunity_preference": "Internship", "institution": "University of KwaZulu-Natal",
+                    "academic_average": 76, "province": "KwaZulu-Natal", "year_level": 3},
+        "application": ("Data analyst intern", "Submitted", None, 2),
+    },
+]

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { User, Mail, Lock, MailCheck, AlertCircle } from "lucide-react";
 import AuthLayout from "../components/AuthLayout.jsx";
 import Button from "../components/Button.jsx";
@@ -141,6 +141,13 @@ export default function Register() {
           >
             Log in
           </button>
+        </p>
+
+        <p className="mt-2 text-center text-[13px] text-muted">
+          Hiring?{" "}
+          <Link to="/login?as=provider" className="font-medium text-ink underline underline-offset-4 hover:no-underline">
+            Provider log in
+          </Link>
         </p>
       </form>
     </AuthLayout>
