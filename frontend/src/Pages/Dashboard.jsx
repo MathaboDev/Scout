@@ -1,144 +1,169 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import Sidebar from "../components/Sidebar";
-import {
-  seedData,
-  getListings,
-  getApplicants,
-  getApplicantsForListing,
-} from "../api/dataService.js";
+import { useParams, Link } from "react-router-dom";
+import ProviderLayout from "../components/ProviderLayout";
+import StatusBadge from "../components/StatusBadge";
+import { getApplicantById, getListingById, updateApplicantStatus } from "../data/dataService";
+import { APPLICATION_STATUSES, DOCUMENT_TYPES } from "../data/constants";
 
-export default function Dashboard() {
-  const [listings, setListings] = useState([]);
-  const [applicants, setApplicants] = useState([]);
+function formatDateTime(iso) {
+  return new Date(iso).toLocaleString("en-ZA", { dateStyle: "medium", timeStyle: "short" });
+}
+
+export default function ApplicantDetails() {
+  const { id } = useParams();
+  const [applicant, setApplicant] = useState(null);
+  const [listing, setListing] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [toast, setToast] = useState("");
 
   useEffect(() => {
-    seedData();
-    setListings(getListings());
-    setApplicants(getApplicants());
-  }, []);
+    // undefined if the applicant doesn't exist OR belongs to another provider's listing
+    const found = getApplicantById(id) || null;
+    setApplicant(found);
+    setSelectedStatus(found ? found.status : "");
+    setListing(found ? getListingById(found.listingId) || null : null);
+  }, [id]);
 
-  const activeCount = listings.filter((l) => l.status === "Open").length;
-  const pendingCount = applicants.filter((a) => a.status === "Submitted").length;
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(""), 2200);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const handleUpdateStatus = () => {
+    try {
+      updateApplicantStatus(applicant.id, selectedStatus);
+      // re-read so the status history includes the new entry
+      setApplicant(getApplicantById(applicant.id));
+      setToast(`Status updated to "${selectedStatus}"`);
+    } catch (err) {
+      setToast(err.message || "Could not update the status. Please try again.");
+    }
+  };
+
+  if (!applicant) {
+    return (
+      <ProviderLayout>
+        <Link className="sp-back-link" to="/dashboard">
+          <i className="ti ti-arrow-left"></i> Back to dashboard
+        </Link>
+        <div className="sp-empty-state">Applicant not found.</div>
+      </ProviderLayout>
+    );
+  }
+
+  const history = [...applicant.statusLog].reverse(); // newest first
 
   return (
-    // h-screen and overflow-hidden locks the page size
-    <div className="flex h-screen w-full bg-cream overflow-hidden font-sans">
-      
-      {/* The Sidebar sits on the left */}
-      <Sidebar active="dashboard" />
+    <ProviderLayout>
+      <Link className="sp-back-link" to={`/view-applicants/${applicant.listingId}`}>
+        <i className="ti ti-arrow-left"></i> Back to applicants
+      </Link>
 
-      {/* flex-1 pushes the main content into the gap on the right */}
-      <main className="flex-1 h-full overflow-y-auto p-6 lg:p-10">
-        
-        {/* Header */}
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <div className="sp-main-head">
+        <div>
+          <h1>{applicant.studentName}</h1>
+          <p>
+            Applied for {listing ? listing.title : "a listing"} · {applicant.appliedDate}
+          </p>
+        </div>
+        <StatusBadge status={applicant.status} />
+      </div>
+
+      <div className="sp-card">
+        <h3>Applicant details</h3>
+        <div className="sp-kv">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-              Welcome back, ByteWorks
-            </h1>
-            <p className="mt-1 text-sm text-muted">
-              Here's an overview of your listings and applicants.
-            </p>
+            <div className="sp-k">Full name</div>
+            <div className="sp-v">{applicant.studentName}</div>
           </div>
-          <Link
-            to="/post-listing"
-            className="inline-flex items-center justify-center gap-2 rounded-xl2 bg-lime px-5 py-2.5 text-sm font-semibold text-ink-soft transition hover:opacity-90"
+          <div>
+            <div className="sp-k">Email</div>
+            <div className="sp-v">{applicant.studentEmail}</div>
+          </div>
+          <div>
+            <div className="sp-k">Institution</div>
+            <div className="sp-v">{applicant.institution}</div>
+          </div>
+          <div>
+            <div className="sp-k">Field of study</div>
+            <div className="sp-v">{applicant.fieldOfStudy}</div>
+          </div>
+          <div>
+            <div className="sp-k">Current year</div>
+            <div className="sp-v">{applicant.year}</div>
+          </div>
+          <div>
+            <div className="sp-k">Applied on</div>
+            <div className="sp-v">{applicant.appliedDate}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="sp-card">
+        <h3>Documents</h3>
+        {DOCUMENT_TYPES.map((doc) => {
+          const attached = Boolean(applicant.documents[doc.key]);
+          return (
+            <div className="sp-doc-row" key={doc.key}>
+              <div className="sp-dname">
+                <i className="ti ti-file-text"></i>
+                {doc.label}
+              </div>
+              <div className={attached ? "sp-status-ok" : "sp-status-warn"}>
+                {attached ? "Attached ✓" : "Not attached"}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="sp-card">
+        <h3>Update status</h3>
+        <p style={{ color: "var(--muted)", fontSize: 12.5, marginBottom: 16 }}>
+          Students see this change on their tracking page.
+        </p>
+        <div className="sp-status-update-bar">
+          <select
+            aria-label="Application status"
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
           >
-            <i className="ti ti-plus text-lg" /> Post a listing
-          </Link>
+            {APPLICATION_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <button
+            className="sp-btn sp-btn-dark"
+            onClick={handleUpdateStatus}
+            disabled={selectedStatus === applicant.status}
+          >
+            <i className="ti ti-check"></i> Update status
+          </button>
         </div>
+      </div>
 
-        {/* Stats Grid */}
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="rounded-xl2 border border-line bg-white p-6 shadow-sm">
-            <div className="text-3xl font-bold text-ink">{activeCount}</div>
-            <div className="mt-1 text-sm font-medium text-muted">Active listings</div>
-          </div>
-          <div className="rounded-xl2 border border-line bg-white p-6 shadow-sm">
-            <div className="text-3xl font-bold text-ink">{applicants.length}</div>
-            <div className="mt-1 text-sm font-medium text-muted">Total applicants</div>
-          </div>
-          <div className="rounded-xl2 border border-line bg-white p-6 shadow-sm">
-            <div className="text-3xl font-bold text-ink">{pendingCount}</div>
-            <div className="mt-1 text-sm font-medium text-muted">Awaiting review</div>
-          </div>
-        </div>
-
-        <h3 className="mb-4 text-lg font-semibold text-ink">Your listings</h3>
-
-        {listings.length === 0 ? (
-          <div className="rounded-xl2 border border-line bg-white p-8 text-center text-muted shadow-sm">
-            You haven't posted any listings yet.{" "}
-            <Link to="/post-listing" className="font-semibold text-lime-ink hover:underline">
-              Post your first one
-            </Link>.
-          </div>
+      <div className="sp-card">
+        <h3>Status history</h3>
+        {history.length === 0 ? (
+          <p style={{ color: "var(--muted)", fontSize: 12.5 }}>No status changes yet.</p>
         ) : (
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            {listings.map((listing) => {
-              const count = getApplicantsForListing(listing.id).length;
-              return (
-                <div
-                  key={listing.id}
-                  className="flex flex-col justify-between rounded-xl2 border border-line bg-white p-6 shadow-sm transition hover:shadow-md"
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-lg font-bold text-ink">{listing.title}</div>
-                        <div className="mt-1 text-sm text-muted">
-                          {listing.company} · {listing.location}
-                        </div>
-                      </div>
-                      
-                      {/* Status Pill using your custom colors */}
-                      <span
-                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-                          listing.status === "Open"
-                            ? "bg-green-bg text-green"
-                            : "bg-gray-bg text-muted"
-                        }`}
-                      >
-                        {listing.status}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 text-xs text-muted">
-                      Posted {listing.postedDate} · Closes {listing.closingDate}
-                    </div>
-
-                    <div className="mt-4 flex items-center gap-3">
-                      {/* Tag using your custom lime color */}
-                      <span
-                        className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${
-                          listing.type === "Internship"
-                            ? "bg-lime text-lime-ink"
-                            : "bg-gray-bg text-ink-soft"
-                        }`}
-                      >
-                        {listing.type}
-                      </span>
-                      <span className="text-sm font-medium text-muted">
-                        {count} applicant{count === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-6">
-                    <Link
-                      to={`/view-applicants/${listing.id}`}
-                      className="block w-full rounded-xl2 bg-ink py-2.5 text-center text-sm font-semibold text-white transition hover:bg-ink-soft"
-                    >
-                      View applicants
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          history.map((entry, i) => (
+            <div className="sp-doc-row" key={`${entry.at}-${i}`}>
+              <div className="sp-dname">
+                {entry.from} → {entry.to}
+              </div>
+              <div className="sp-log-time">
+                {entry.by} · {formatDateTime(entry.at)}
+              </div>
+            </div>
+          ))
         )}
-      </main>
-    </div>
+      </div>
+
+      {toast && <div className="sp-toast">{toast}</div>}
+    </ProviderLayout>
   );
 }
