@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import Sidebar from "../components/Sidebar";
+import ProviderLayout from "../components/ProviderLayout";
 import StatusBadge from "../components/StatusBadge";
 import { getListingById, getApplicantsForListing } from "../data/dataService";
 
@@ -10,30 +10,28 @@ export default function ViewApplicants() {
   const [applicants, setApplicants] = useState([]);
 
   useEffect(() => {
-    setListing(getListingById(listingId));
+    setListing(getListingById(listingId) || null);
     setApplicants(getApplicantsForListing(listingId));
   }, [listingId]);
 
   return (
-    <div className="sp-app">
-      <Sidebar />
+    <ProviderLayout>
+      <Link className="sp-back-link" to="/dashboard">
+        <i className="ti ti-arrow-left"></i> Back to dashboard
+      </Link>
 
-      <div className="sp-main">
-        <Link className="sp-back-link" to="/dashboard">
-          <i className="ti ti-arrow-left"></i> Back to dashboard
-        </Link>
-
-        <div className="sp-main-head">
-          <div>
-            <h1>{listing ? listing.title : "Listing not found"}</h1>
-            <p>
-              {listing
-                ? `${listing.company} · ${listing.location} — showing applicants for this listing only.`
-                : "This listing may have been removed."}
-            </p>
-          </div>
+      <div className="sp-main-head">
+        <div>
+          <h1>{listing ? listing.title : "Listing not found"}</h1>
+          <p>
+            {listing
+              ? `${listing.company} · ${listing.location} — showing applicants for this listing only.`
+              : "This listing may have been removed."}
+          </p>
         </div>
+      </div>
 
+      {listing && (
         <div className="sp-card">
           {applicants.length === 0 ? (
             <div className="sp-empty-state">No one has applied to this listing yet.</div>
@@ -79,7 +77,7 @@ export default function ViewApplicants() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      )}
+    </ProviderLayout>
   );
 }
