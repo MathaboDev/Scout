@@ -1,69 +1,57 @@
-import {
-  Target,
-  Zap,
-  Radar,
-  ArrowRight,
-  ShieldCheck,
-  FileCheck2,
-  BellRing,
-  Eye,
-  Lock,
-  Trash2,
-} from "lucide-react";
+import { BellRing, Compass, Eye, FileCheck2, Lock, ScanSearch, Send, Trash2, UserRound } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
-import Button from "../components/Button.jsx";
-import Marquee from "../components/Marquee.jsx";
-import CountUp from "../components/CountUp.jsx";
-import RadarPanel from "../components/RadarPanel.jsx";
-import FeatureCard from "../components/FeatureCard.jsx";
+import { CtaPair, FluidGradient, SectionTag } from "../components/landing.jsx";
 
-const MARQUEE_ITEMS = [
-  "Eligibility matching",
-  "One profile, every application",
-  "Deadline reminders",
-  "POPIA compliant",
-  "Verified listings only",
-];
+// Public landing page. Sections, top to bottom:
+//   hero (fluid gradient) -> our offer -> three feature panels ->
+//   how it works (three steps) -> data & POPIA -> call to action -> footer
+// The only "functionality" here is links: /register, /login and the
+// #how / #privacy anchors used by the navbar.
 
 const FEATURES = [
   {
-    icon: Target,
-    name: "Only see what fits",
-    desc: "Listings are checked against the relevant parts of your profile and the provider requirements before they reach your eligible feed.",
+    icon: ScanSearch,
+    name: "Eligibility matching",
+    desc: "Every listing is checked against your field, average, year and province before it reaches your feed.",
   },
   {
-    icon: Zap,
+    icon: FileCheck2,
     name: "Assisted apply",
-    desc: "Your profile pre-fills the form. You review every field before anything is sent. Scout never submits on its own.",
-  },
-  {
-    icon: Radar,
-    name: "One dashboard to track",
-    desc: "Status changes from providers land on your dashboard automatically, no five-tab portal check-in.",
+    desc: "Your profile pre-fills the form. You review every field before anything is sent.",
   },
   {
     icon: BellRing,
-    name: "Reminders that matter",
-    desc: "A nudge three days before a bookmarked closing date, and the moment an outcome comes in.",
+    name: "Live tracking",
+    desc: "Status changes land on your watchlist, plus a nudge three days before a saved listing closes.",
   },
+];
+
+// panel backgrounds, left to right (first one light, like the reference)
+const PANEL_STYLES = [
+  "bg-[#F8F8F8] text-ink",
+  "bg-[#1F1F1F] text-white",
+  "bg-[#171717] text-white",
 ];
 
 const STEPS = [
   {
-    n: "01",
+    icon: UserRound,
+    tag: "Profile",
     title: "Build one profile",
-    desc: "Field of study, institution, year or qualification, academic average, plus your CV, matric certificate and optional supporting documents.",
+    desc: "Field of study, institution, year or qualification and average, plus your CV and matric certificate. Once.",
   },
   {
-    n: "02",
+    icon: Compass,
+    tag: "Match",
     title: "Get matched, not flooded",
-    desc: "Toggle between eligible opportunities and all verified active opportunities. Expired listings are hidden automatically.",
+    desc: "Switch between what you qualify for and everything that's open. Expired listings disappear on their own.",
   },
   {
-    n: "03",
+    icon: Send,
+    tag: "Apply",
     title: "Apply, then forget the tab",
-    desc: "Confirm the pre-filled review screen, get a reference number, and let your dashboard chase the status update.",
+    desc: "Confirm the pre-filled review screen, get a reference number, and let your watchlist chase the outcome.",
   },
 ];
 
@@ -71,165 +59,165 @@ const PRIVACY_POINTS = [
   {
     icon: Eye,
     title: "You can see what's stored",
-    desc: "Every field Scout holds on you, professional or sensitive, is visible in your account at any time.",
+    desc: "Every field Scout holds on you is visible in your account at any time.",
   },
   {
     icon: Lock,
-    title: "Sensitive data stays separate",
-    desc: "ID numbers, banking details and health information are never mixed with the profile providers can see, and are never shared without your consent.",
+    title: "Only what an application needs",
+    desc: "No ID numbers, banking, health or address details. Providers only see your professional profile.",
   },
   {
     icon: Trash2,
-    title: "You can restrict or delete it",
-    desc: "In line with POPIA (No. 4 of 2013), you can restrict or permanently delete your personal data whenever you choose.",
+    title: "You stay in control",
+    desc: "In line with POPIA (Act 4 of 2013), you can restrict or delete your personal data whenever you choose.",
   },
 ];
 
 export default function Landing() {
   return (
-    <div>
-      {/* HERO */}
-      <div className="bg-ink">
-        <Navbar />
-        <div className="mx-auto grid max-w-6xl gap-10 px-6 pb-16 pt-6 md:grid-cols-[1.15fr_0.85fr] md:items-center md:px-12">
-          <div className="animate-rise text-white">
-            <h1 className="text-[38px] font-bold leading-[1.12] md:text-[46px]">
-              Find and apply for{" "}
-              <span className="inline-block rounded-lg bg-lime px-3 py-0.5 text-ink">
-                opportunities
-              </span>{" "}
-              faster.
-            </h1>
-            <p className="mt-5 max-w-md text-white/65">
-              Scout builds one verified student profile and uses it to match,
-              pre-fill, and track applications for internships, learnerships
-              and graduate programmes. Nothing gets missed and nothing
-              gets re-typed.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3.5">
-              <Button to="/register" variant="lime">
-                Get started <ArrowRight size={16} />
-              </Button>
-              <Button href="#why-scout" variant="outline-light">
-                Learn more
-              </Button>
-            </div>
-            <dl className="mt-12 flex gap-10">
-              <div>
-                <dt className="sr-only">Documents uploaded once</dt>
-                <dd className="font-display text-2xl font-bold text-lime">
-                  <CountUp end={1} suffix="×" />
-                </dd>
-                <p className="text-xs text-white/40">upload, reused everywhere</p>
-              </div>
-              <div>
-                <dt className="sr-only">Applications tracked in one place</dt>
-                <dd className="font-display text-2xl font-bold text-lime">
-                  <CountUp end={100} suffix="%" />
-                </dd>
-                <p className="text-xs text-white/40">of statuses in one dashboard</p>
-              </div>
-              <div>
-                <dt className="sr-only">Minimum uptime</dt>
-                <dd className="font-display text-2xl font-bold text-lime">
-                  <CountUp end={99} suffix="%" />
-                </dd>
-                <p className="text-xs text-white/40">uptime target</p>
-              </div>
-            </dl>
-          </div>
-          <RadarPanel />
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#0A0A0A] text-white">
+      <Navbar />
 
-      <Marquee items={MARQUEE_ITEMS} className="bg-lime px-6 py-4 text-[13px] font-bold text-lime-ink md:px-12" />
-
-      {/* WHY SCOUT */}
-      <section id="why-scout" className="bg-cream px-6 py-16 md:px-12">
-        <div className="mx-auto grid max-w-6xl gap-12 md:grid-cols-[0.9fr_1.1fr]">
-          <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-lime px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-lime-ink">
-              Why Scout
-            </span>
-            <h2 className="mt-4 max-w-sm text-[26px] font-bold leading-tight">
-              Built around the problems students actually described
-            </h2>
-            <p className="mt-3.5 max-w-sm text-sm leading-relaxed text-muted">
-              No re-entering the same documents for every application. No
-              scrolling past listings you don't qualify for. No checking five
-              portals to find out an outcome came in. Every feature traces
-              back to a specific frustration from student research.
+      {/* ---------- HERO ---------- */}
+      <section className="relative flex min-h-[100svh] flex-col overflow-hidden rounded-b-[28px]">
+        <FluidGradient />
+        <div className="relative flex flex-1 flex-col justify-between px-6 pb-10 pt-36 sm:px-8 md:px-10 md:pb-12 md:pt-[22vh]">
+          <h1 className="max-w-[15ch] text-[clamp(3rem,7.4vw,7rem)] font-medium leading-[1.02] tracking-[-0.025em]">
+            We find what fits for you.
+          </h1>
+          <div className="mt-16 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+            <p className="max-w-[34rem] text-lg leading-snug text-white/90 md:text-[22px]">
+              The one-profile platform for South African students to find, apply for and track
+              internships, learnerships and graduate programmes faster than ever.
             </p>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {FEATURES.map((f) => (
-              <FeatureCard key={f.name} {...f} />
-            ))}
+            <CtaPair label="Create your profile" to="/register" />
           </div>
         </div>
       </section>
 
-      {/* HOW IT WORKS, a real 3-step sequence, so numbering earns its place */}
-      <section className="bg-white px-6 py-16 md:px-12">
-        <div className="mx-auto max-w-6xl">
-          <h2 className="max-w-md text-[26px] font-bold leading-tight">
-            From blank profile to submitted application
-          </h2>
-          <div className="mt-10 grid gap-8 md:grid-cols-3">
-            {STEPS.map((s, i) => (
-              <div key={s.n} className="relative pl-0">
-                <span className="font-display text-sm font-bold text-lime-ink">{s.n}</span>
-                <h3 className="mt-2 text-lg font-bold">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted">{s.desc}</p>
-                {i < STEPS.length - 1 && (
-                  <div className="mt-6 hidden h-px bg-line md:block" aria-hidden="true" />
-                )}
-              </div>
-            ))}
-          </div>
+      {/* ---------- OUR OFFER ---------- */}
+      <section className="grid gap-10 px-6 py-24 sm:px-8 md:grid-cols-[1fr_1.25fr] md:px-10 md:py-32">
+        <div className="md:sticky md:top-28 md:self-start">
+          <SectionTag>Our offer</SectionTag>
         </div>
-      </section>
-
-      {/* PRIVACY / POPIA */}
-      <section id="privacy" className="bg-gray-bg px-6 py-16 md:px-12">
-        <div className="mx-auto max-w-6xl">
-          <div className="flex items-center gap-2.5">
-            <ShieldCheck size={20} className="text-lime-ink" />
-            <span className="text-[11px] font-bold uppercase tracking-wide text-lime-ink">
-              Data &amp; POPIA
-            </span>
-          </div>
-          <h2 className="mt-3 max-w-lg text-[26px] font-bold leading-tight">
-            Your profile only ever holds what an application needs
+        <div>
+          <h2 className="text-[clamp(2.25rem,4.4vw,4rem)] font-medium leading-[1.08] tracking-[-0.02em]">
+            Everything you need to get hired, that actually moves{" "}
+            <span className="text-white/40">your career forward.</span>
           </h2>
-          <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted">
-            Scout profiles are professional information only.
+          <p className="mt-10 max-w-[30rem] text-[17px] leading-relaxed text-white/60">
+            Scout replaces the patchwork of company portals, re-typed forms and inbox refreshing with
+            a single profile where every application flows from match to outcome. Matching hides what
+            you don't qualify for, assisted apply pre-fills every form, and live tracking tells you the
+            moment a provider updates your status.
           </p>
-          <div className="mt-9 grid gap-5 sm:grid-cols-3">
-            {PRIVACY_POINTS.map((p) => (
-              <div key={p.title} className="rounded-xl2 border border-line bg-white p-5">
-                <p.icon size={18} className="text-lime-ink" />
-                <p className="mt-3 text-sm font-bold">{p.title}</p>
-                <p className="mt-1.5 text-xs leading-relaxed text-muted">{p.desc}</p>
-              </div>
-            ))}
+          <div className="mt-10">
+            <CtaPair label="Discover how it works" href="#how" />
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="bg-ink px-6 py-16 text-center md:px-12">
-        <FileCheck2 size={26} className="mx-auto text-lime" />
-        <h2 className="mx-auto mt-4 max-w-md text-[26px] font-bold leading-tight text-white">
-          Upload your documents once. Apply everywhere they fit.
-        </h2>
-        <div className="mt-7 flex justify-center gap-3.5">
-          <Button to="/register" variant="lime">
-            Create your profile <ArrowRight size={16} />
-          </Button>
-          <Button to="/login" variant="outline-light">
-            I already have an account
-          </Button>
+      {/* ---------- FEATURE PANELS ---------- */}
+      <section className="grid md:grid-cols-3">
+        {FEATURES.map((f, i) => (
+          <article
+            key={f.name}
+            className={`flex min-h-[340px] flex-col justify-between p-10 md:min-h-[380px] md:p-12 ${PANEL_STYLES[i]}`}
+          >
+            <div className="flex items-start justify-between">
+              <f.icon size={58} strokeWidth={1.1} />
+              <span className="text-[11px] tracking-[0.2em] opacity-60">0{i + 1}.</span>
+            </div>
+            <div>
+              <h3 className="text-[26px] font-medium tracking-tight">{f.name}</h3>
+              <p className="mt-3 max-w-[24rem] text-[15px] leading-relaxed opacity-70">{f.desc}</p>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      {/* ---------- HOW IT WORKS ---------- */}
+      <section id="how" className="scroll-mt-20 px-6 py-24 sm:px-8 md:px-10 md:py-32">
+        <div className="grid gap-10 md:grid-cols-[1fr_1.25fr]">
+          <div className="md:sticky md:top-28 md:self-start">
+            <SectionTag>How it works</SectionTag>
+          </div>
+          <div>
+            <h2 className="text-[clamp(2.25rem,4.4vw,4rem)] font-medium leading-[1.08] tracking-[-0.02em]">
+              Scout is built on three simple steps.
+            </h2>
+            <p className="mt-8 max-w-[34rem] text-xl font-light leading-relaxed text-white/60">
+              Each one carries part of the journey, turning the frustrating effort of hunting for jobs into a
+              single, continuous motion.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-20 grid gap-4 md:grid-cols-3">
+          {STEPS.map((s, i) => {
+            const light = i === 0;
+            return (
+              <article
+                key={s.title}
+                className={`flex min-h-[360px] flex-col justify-between rounded-2xl p-8 ${
+                  light ? "bg-[#F8F8F8] text-ink" : "bg-[#141414] text-white"
+                }`}
+              >
+                <span
+                  className={`flex h-10 w-10 items-center justify-center rounded-md ${
+                    light ? "bg-black/[0.08]" : "bg-white/[0.08]"
+                  }`}
+                >
+                  <s.icon size={19} strokeWidth={1.6} />
+                </span>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.2em] opacity-50">
+                    0{i + 1} — {s.tag}
+                  </p>
+                  <h3 className="mt-3 text-[26px] font-medium tracking-tight">{s.title}</h3>
+                  <p className="mt-3 text-[15px] leading-relaxed opacity-60">{s.desc}</p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ---------- DATA & POPIA ---------- */}
+      <section id="privacy" className="scroll-mt-20 px-6 pb-24 sm:px-8 md:px-10 md:pb-32">
+        <div className="grid gap-10 md:grid-cols-[1fr_1.25fr]">
+          <div className="md:sticky md:top-28 md:self-start">
+            <SectionTag>Data &amp; POPIA</SectionTag>
+          </div>
+          <h2 className="text-[clamp(2.25rem,4.4vw,4rem)] font-medium leading-[1.08] tracking-[-0.02em]">
+            Your profile only ever holds what an <span className="text-white/40">application needs.</span>
+          </h2>
+        </div>
+        <div className="mt-16 grid gap-4 md:grid-cols-3">
+          {PRIVACY_POINTS.map((p) => (
+            <div key={p.title} className="rounded-2xl border border-white/10 p-8">
+              <p.icon size={22} strokeWidth={1.5} className="text-white/80" />
+              <h3 className="mt-10 text-xl font-medium">{p.title}</h3>
+              <p className="mt-2 text-[15px] leading-relaxed text-white/55">{p.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ---------- CALL TO ACTION ---------- */}
+      <section className="px-4 pb-16 sm:px-6 md:px-10">
+        <div className="relative flex min-h-[520px] flex-col justify-between overflow-hidden rounded-3xl p-8 sm:p-12 md:px-14 md:py-16">
+          <FluidGradient />
+          <h2 className="relative max-w-[14ch] text-[clamp(2.75rem,5.6vw,5.25rem)] font-medium leading-[1.04] tracking-[-0.025em]">
+            Upload once, apply everywhere.
+          </h2>
+          <div className="relative mt-16 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+            <p className="max-w-[30rem] text-lg font-light leading-snug text-white/90 md:text-[26px]">
+              Set up your profile in minutes. Your documents are reused for every application, no
+              re-typing, no friction.
+            </p>
+            <CtaPair label="Get started" to="/register" />
+          </div>
         </div>
       </section>
 

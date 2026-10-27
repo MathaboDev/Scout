@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Mail, Lock, MailCheck, AlertCircle } from "lucide-react";
-import AuthNavbar from "../components/AuthNavbar.jsx";
+import AuthLayout from "../components/AuthLayout.jsx";
 import Button from "../components/Button.jsx";
 import FormField from "../components/FormField.jsx";
 import { api } from "../lib/api.js";
@@ -29,7 +29,7 @@ export default function Register() {
     const next = {};
     if (!form.full_name.trim()) next.full_name = "Enter your full name.";
     if (!EMAIL_RE.test(form.email)) next.email = "Enter a valid email address.";
-    if (form.password.length < 8) next.password = "Use at least 8 characters.";
+    if (form.password.length < 10) next.password = "Use at least 10 characters.";
     if (form.confirm_password !== form.password) next.confirm_password = "Passwords don't match.";
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -52,38 +52,35 @@ export default function Register() {
 
   if (sent) {
     return (
-      <div className="relative flex min-h-screen items-center justify-center bg-cream px-6 py-12">
-        <AuthNavbar current="register" />
-        <div className="w-full max-w-[420px] rounded-2xl border border-line bg-white p-11 text-center shadow-sm">
-          <MailCheck size={30} className="mx-auto mb-4 mt-8 text-lime-ink" />
-          <h2 className="text-xl font-bold">Check your inbox</h2>
+      <AuthLayout current="register" headline="You're in. Let's find what fits." tag="Sign up">
+        <div className="text-center">
+          <MailCheck size={30} className="mx-auto mb-4 mt-4 text-ink" />
+          <h2 className="text-3xl font-medium tracking-tight">Account created</h2>
           <p className="mt-2.5 text-sm leading-relaxed text-muted">
-            We've sent a verification link to <strong className="text-ink">{form.email}</strong>.
-            Confirm it before you build your profile or apply to anything.
+            Your account for <strong className="text-ink">{form.email}</strong> is ready.
+            Log in to build your profile and upload your documents.
           </p>
           <Button to="/login" variant="dark" full className="mt-7">
             Go to log in
           </Button>
         </div>
-      </div>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-cream px-6 py-12">
-      <AuthNavbar current="register" />
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="w-full max-w-[460px] rounded-2xl border border-line bg-white p-11 shadow-sm"
-      >
-        <h2 className="text-center text-[22px] font-bold">Create your account</h2>
-        <p className="mb-6 text-center text-[13px] text-muted">
-          Takes about two minutes. You will add academic details next.
-        </p>
+    <AuthLayout
+      current="register"
+      headline="One profile. Every opportunity."
+      blurb="Upload your documents once, get matched to what you qualify for, and track every application in one place."
+      tag="Sign up"
+      title="Create your account"
+      subtitle="Takes about two minutes. You will add academic details next."
+    >
+      <form onSubmit={handleSubmit} noValidate>
 
         {serverError && (
-          <div className="mb-5 flex items-start gap-2 rounded-[10px] bg-amber-bg px-3.5 py-3 text-xs text-[#966B1F]">
+          <div className="mb-5 flex items-start gap-2 rounded-md bg-amber-bg px-3.5 py-3 text-xs text-[#966B1F]">
             <AlertCircle size={15} className="mt-px shrink-0" />
             <span>{serverError}</span>
           </div>
@@ -131,25 +128,21 @@ export default function Register() {
           {submitting ? "Creating account..." : "Create account"}
         </Button>
 
-        <div className="mt-5 flex items-start gap-2 rounded-[10px] bg-gray-bg px-3.5 py-3 text-[11.5px] leading-relaxed text-muted">
-          <MailCheck size={15} className="mt-px shrink-0" />
-          <span>
-            We'll send a verification link to your email. You'll need to
-            confirm it before applying to anything.
-          </span>
-        </div>
+        <p className="mt-4 text-center text-[11.5px] text-muted">
+          Use at least 10 characters for your password.
+        </p>
 
-        <p className="mt-5 text-center text-[13px] text-muted">
+        <p className="mt-6 text-center text-[13px] text-muted">
           Already have an account?{" "}
           <button
             type="button"
             onClick={() => navigate("/login")}
-            className="font-bold text-lime-ink hover:underline"
+            className="font-medium text-ink underline underline-offset-4 hover:no-underline"
           >
             Log in
           </button>
         </p>
       </form>
-    </div>
+    </AuthLayout>
   );
 }

@@ -1,3 +1,9 @@
+/* Roboto is bundled with the app (npm @fontsource/roboto), so it loads
+   even without internet. @import must come before everything else. */
+@import "@fontsource/roboto/400.css";
+@import "@fontsource/roboto/500.css";
+@import "@fontsource/roboto/700.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,7 +22,7 @@
     @apply font-display;
   }
   ::selection {
-    background: #d7ff3d;
+    background: #e4eacf;
     color: #101014;
   }
   /* visible keyboard focus everywhere, no exceptions */
@@ -31,13 +37,26 @@
   }
 }
 
+
 @layer utilities {
+  /* dot texture used by the landing page radar */
   .grain {
-    background-image: radial-gradient(
-      rgba(255, 255, 255, 0.05) 1px,
-      transparent 1px
-    );
+    background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
     background-size: 14px 14px;
+  }
+}
+
+/* landing page fluid gradient: each blob drifts by its own --dx/--dy/--s */
+.fluid-blob {
+  animation: drift 20s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes drift {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(var(--dx), var(--dy)) scale(var(--s));
   }
 }
 
@@ -49,5 +68,15 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* phone menu drawer slides in from the left */
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
   }
 }

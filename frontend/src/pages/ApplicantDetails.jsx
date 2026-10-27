@@ -1,272 +1,210 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import Sidebar from "../components/Sidebar";
-import StatusBadge from "../components/StatusBadge";
-import {
-  seedData,
-  getListingById,
-  getApplicantsForListing,
-  getApplicantById,
-  updateApplicantStatus,
-} from "../api/dataService.js";
+import { AlertTriangle, ArrowLeft, Check, FileText } from "lucide-react";
+import ProviderShell, { Card, ErrorNote, PageHeader, Toast } from "../components/ProviderShell.jsx";
+import StatusBadge, { StatusTimeline } from "../components/StatusBadge.jsx";
+import { api } from "../lib/api.js";
+import { APPLICATION_STATUSES, OUTCOME_RESULTS, formatDate, ordinalYear } from "../lib/constants.js";
 
-const STATUS_OPTIONS = [
-  "Submitted",
-  "Under review",
-  "Interview",
-  "Accepted",
-  "Rejected",
-];
-
+// One applicant + the status control (FR10). The status saved here is the
+// same column the student's dashboard polls, so they see it within ~15 s.
 export default function ApplicantDetails() {
-  const { listingId, id } = useParams();
-
-  const [listing, setListing] = useState(null);
-  const [applicants, setApplicants] = useState([]);
+  const { listingId, applicationId } = useParams();
   const [applicant, setApplicant] = useState(null);
-  const [selectedStatus, setSelectedStatus] = useState("");
+  const [documents, setDocuments] = useState([]);
+  const [missing, setMissing] = useState([]);
+  const [nextStatus, setNextStatus] = useState("");
+  const [outcome, setOutcome] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [toast, setToast] = useState("");
 
   useEffect(() => {
-    seedData();
-
-    const foundListing = getListingById(listingId);
-    setListing(foundListing || null);
-
-    if (id) {
-      const found = getApplicantById(id);
-      if (found && found.listingId === listingId) {
-        setApplicant(found);
-        setSelectedStatus(found.status);
-      } else {
-        setApplicant(null);
-      }
-      setApplicants([]);
-    } else {
-      setApplicant(null);
-      setApplicants(getApplicantsForListing(listingId));
-    }
-  }, [listingId, id]);
+    api
+      .getApplicant(applicationId)
+      .then((data) => {
+        setApplicant(data.applicant);
+        setDocuments(data.documents);
+        setMissing(data.missing_documents);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [applicationId]);
 
   useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(""), 2200);
-    return () => clearTimeout(timer);
+    if (!toast) return undefined;
+    const t = setTimeout(() => setToast(""), 3000);
+    return () => clearTimeout(t);
   }, [toast]);
 
-  const handleUpdateStatus = () => {
-    if (!applicant) return;
-    const updated = updateApplicantStatus(applicant.id, selectedStatus);
-    if (updated) {
-      setApplicant(updated);
-      setToast(`Status updated to "${selectedStatus}"`);
-    }
-  };
+  // Status only moves forward: Submitted -> Under Review -> Outcome Received.
+  const currentIndex = applicant ? APPLICATION_STATUSES.indexOf(applicant.status) : 0;
+  const forwardOptions = APPLICATION_STATUSES.slice(currentIndex + 1);
+  const finished = applicant?.status === "Outcome Received";
 
-  
-  const LayoutWrapper = ({ children }) => (
-    <div className="flex h-screen w-full bg-cream overflow-hidden font-sans">
-      <Sidebar active="dashboard" />
-      <main className="flex-1 h-full overflow-y-auto p-6 lg:p-10">
-        {children}
-      </main>
-    </div>
+  async function handleSave() {
+    setError("");
+    setSaving(true);
+    try {
+      const data = await api.updateApplicantStatus(applicationId, {
+        status: nextStatus,
+        outcome_result: nextStatus === "Outcome Received" ? outcome : null,
+      });
+      setApplicant(data.applicant);
+      setNextStatus("");
+      setOutcome("");
+      setToast("Status updated. The student has been notified.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const backLink = (
+    <Link
+      to={`/provider/listings/${listingId}/applicants`}
+      className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink"
+    >
+      <ArrowLeft size={16} /> Back to applicants
+    </Link>
   );
 
-  if (!listing) {
+  if (loading || !applicant) {
     return (
-      <LayoutWrapper>
-        <Link className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-ink" to="/dashboard">
-          <i className="ti ti-arrow-left" /> Back to dashboard
-        </Link>
-        <div className="rounded-xl2 border border-line bg-white p-8 text-center text-muted shadow-sm">
-          <i className="ti ti-briefcase-off text-4xl mb-3 text-line" />
-          <h2 className="text-lg font-semibold text-ink">Listing not found.</h2>
-        </div>
-      </LayoutWrapper>
+      <ProviderShell>
+        {backLink}
+        {loading ? <p className="text-sm text-muted">Loading...</p> : <ErrorNote>{error || "Applicant not found."}</ErrorNote>}
+      </ProviderShell>
     );
   }
 
-  /* ==========================================
-     VIEW 1: LIST OF APPLICANTS
-     ========================================== */
-  if (!id) {
-    return (
-      <LayoutWrapper>
-        <Link className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-ink" to="/dashboard">
-          <i className="ti ti-arrow-left" /> Back to dashboard
-        </Link>
-
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">Applicants</h1>
-          <p className="mt-1 text-sm text-muted">{listing.title} · {listing.company}</p>
-        </div>
-
-        <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-xl2 border border-line bg-white p-6 shadow-sm">
-            <div className="text-3xl font-bold text-ink">{applicants.length}</div>
-            <div className="mt-1 text-sm font-medium text-muted">Total applicants</div>
-          </div>
-        </div>
-
-        <h3 className="mb-4 text-lg font-semibold text-ink">Applicant list</h3>
-
-        {applicants.length === 0 ? (
-          <div className="rounded-xl2 border border-line bg-white p-8 text-center text-muted shadow-sm">
-            No students have applied for this listing yet.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            {applicants.map((item) => (
-              <div key={item.id} className="flex flex-col justify-between rounded-xl2 border border-line bg-white p-6 shadow-sm">
-                <div>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-lg font-bold text-ink">{item.studentName}</div>
-                      <div className="mt-1 text-sm text-muted">{item.studentEmail}</div>
-                    </div>
-                    <StatusBadge status={item.status} />
-                  </div>
-
-                  <div className="mt-4 text-sm text-muted">
-                    {item.institution} · {item.fieldOfStudy}
-                  </div>
-                  <div className="mt-1 text-xs text-muted">
-                    {item.year} · Applied {item.appliedDate}
-                  </div>
-                </div>
-
-                <div className="mt-6">
-           
-                  <Link
-                    className="flex w-full items-center justify-center gap-2 rounded-xl2 bg-ink py-2.5 text-sm font-semibold text-white transition hover:bg-ink-soft"
-                    to={`/applicantdetails/${listingId}/${item.id}`}
-                  >
-                    <i className="ti ti-user" /> View details
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </LayoutWrapper>
-    );
-  }
-
-  /* ==========================================
-     VIEW 2: SINGLE APPLICANT DETAILS
-     ========================================== */
-  if (!applicant) {
-    return (
-      <LayoutWrapper>
-        <Link className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-ink" to={`/view-applicants/${listingId}`}>
-          <i className="ti ti-arrow-left" /> Back to applicants
-        </Link>
-        <div className="rounded-xl2 border border-line bg-white p-8 text-center text-muted shadow-sm">
-          <i className="ti ti-user-x text-4xl mb-3 text-line" />
-          <h2 className="text-lg font-semibold text-ink">Applicant not found for this listing.</h2>
-        </div>
-      </LayoutWrapper>
-    );
-  }
-
-  const documents = applicant.documents || {};
+  const isGraduate = applicant.student_type === "Graduate";
   const details = [
-    ["Full name", applicant.studentName],
-    ["Email", applicant.studentEmail],
+    ["Full name", `${applicant.first_name} ${applicant.last_name}`],
+    ["Email", applicant.email],
     ["Institution", applicant.institution],
-    ["Field of study", applicant.fieldOfStudy],
-    ["Current year", applicant.year],
-    ["Applied on", applicant.appliedDate],
+    ["Field of study", applicant.field_of_study],
+    isGraduate
+      ? ["Qualification", `${applicant.qualification} (${applicant.graduate_type})`]
+      : ["Year of study", ordinalYear(applicant.year_level)],
+    ["Academic average", applicant.academic_average != null ? `${applicant.academic_average}%` : ""],
+    ["Province", applicant.province],
+    ["Reference", applicant.reference_number],
+    ["Applied", formatDate(applicant.submitted_at, true)],
   ];
-  const documentList = [
-    ["CV / résumé", documents.cv],
-    ["Academic transcript", documents.transcript],
-    ["ID document", documents.idDoc],
-  ];
+
+  const canSave = nextStatus && (nextStatus !== "Outcome Received" || outcome);
 
   return (
-    <LayoutWrapper>
-      <Link className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-ink" to={`/view-applicants/${listingId}`}>
-        <i className="ti ti-arrow-left" /> Back to applicants
-      </Link>
+    <ProviderShell>
+      {backLink}
+      <PageHeader
+        title={`${applicant.first_name} ${applicant.last_name}`}
+        subtitle={`Applied for ${applicant.opportunity_title}`}
+        action={<StatusBadge status={applicant.status} outcome={applicant.outcome_result} />}
+      />
 
-      <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{applicant.studentName}</h1>
-          <p className="mt-1 text-sm text-muted">Applied for {listing.title} · {applicant.appliedDate}</p>
-        </div>
-        <StatusBadge status={applicant.status} />
-      </div>
+      <ErrorNote>{error}</ErrorNote>
 
-      <div className="space-y-6 max-w-5xl">
-        {/* DETAILS CARD */}
-        <div className="rounded-xl2 border border-line bg-white p-6 shadow-sm sm:p-8">
-          <h3 className="mb-6 border-b border-line pb-4 text-lg font-semibold text-ink">Applicant details</h3>
-          <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
-            {details.map(([label, value]) => (
-              <div key={label}>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">{label}</div>
-                <div className="text-sm font-medium text-ink">{value || "Not provided"}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* DOCUMENTS CARD */}
-        <div className="rounded-xl2 border border-line bg-white p-6 shadow-sm sm:p-8">
-          <h3 className="mb-4 text-lg font-semibold text-ink">Documents</h3>
-          <div className="divide-y divide-line">
-            {documentList.map(([name, attached]) => (
-              <div className="flex items-center justify-between py-4 first:pt-0 last:pb-0" key={name}>
-                <div className="flex items-center gap-3 text-sm font-medium text-ink">
-                  <i className="ti ti-file-text text-lg text-muted" /> {name}
+      <div className="grid max-w-5xl gap-5 lg:grid-cols-[1.6fr_1fr]">
+        <div className="space-y-5">
+          <Card className="sm:p-8">
+            <h2 className="mb-5 border-b border-line pb-4 text-lg font-medium tracking-tight">Applicant details</h2>
+            <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
+              {details.map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</dt>
+                  <dd className="mt-1 text-sm font-semibold">{value || "Not provided"}</dd>
                 </div>
-                <div className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
-                  attached ? "bg-green-bg text-green" : "bg-amber-bg text-amber"
-                }`}>
-                  <i className={attached ? "ti ti-check" : "ti ti-alert-circle"} />
-                  {attached ? "Attached" : "Not attached"}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* UPDATE STATUS CARD */}
-        <div className="rounded-xl2 border border-line bg-white p-6 shadow-sm sm:p-8">
-          <h3 className="mb-2 text-lg font-semibold text-ink">Update application status</h3>
-          <p className="mb-6 text-sm text-muted">Choose a status and save your change.</p>
-          
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full rounded-xl2 border border-line bg-cream px-4 py-2.5 text-sm font-medium text-ink outline-none transition focus:border-ink focus:ring-1 focus:ring-ink sm:max-w-xs"
-            >
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status} value={status}>{status}</option>
               ))}
-            </select>
+            </dl>
+          </Card>
 
-            <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-xl2 bg-ink px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-ink-soft"
-              onClick={handleUpdateStatus}
-            >
-              <i className="ti ti-check" /> Update status
-            </button>
-          </div>
+          <Card className="sm:p-8">
+            <h2 className="mb-3 text-lg font-medium tracking-tight">Documents</h2>
+            <ul className="divide-y divide-line">
+              {documents.map((d) => (
+                <li key={d.document_id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                  <span className="flex items-center gap-2.5 font-semibold">
+                    <FileText size={16} className="text-muted" /> {d.file_name}
+                  </span>
+                  <span className="rounded-full bg-green-bg px-3 py-1 text-xs font-bold capitalize text-[#3F7A33]">
+                    {d.document_type.replace(/_/g, " ")}
+                  </span>
+                </li>
+              ))}
+              {missing.map((m) => (
+                <li key={m.document_type} className="flex items-center justify-between gap-3 py-3 text-sm">
+                  <span className="flex items-center gap-2.5 font-semibold text-muted">
+                    <AlertTriangle size={16} /> {m.label}
+                  </span>
+                  <span className="rounded-full bg-amber-bg px-3 py-1 text-xs font-bold text-[#966B1F]">Not attached</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </div>
+
+        <div className="space-y-5">
+          <Card>
+            <h2 className="mb-4 text-lg font-medium tracking-tight">Progress</h2>
+            <StatusTimeline status={applicant.status} outcome={applicant.outcome_result} />
+          </Card>
+
+          <Card>
+            <h2 className="text-lg font-medium tracking-tight">Update status</h2>
+            {finished ? (
+              <p className="mt-2 text-sm text-muted">
+                Outcome recorded {formatDate(applicant.outcome_received_at, true)}. No further changes.
+              </p>
+            ) : (
+              <>
+                <p className="mt-1 text-xs text-muted">The student sees this on their dashboard and gets notified.</p>
+                <select
+                  value={nextStatus}
+                  onChange={(e) => setNextStatus(e.target.value)}
+                  className="mt-4 w-full rounded-md border border-black/10 bg-white px-4 py-2.5 text-sm font-medium outline-none focus:border-ink"
+                >
+                  <option value="">Move to...</option>
+                  {forwardOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+
+                {nextStatus === "Outcome Received" && (
+                  <div className="mt-3 flex gap-2" role="radiogroup" aria-label="Outcome">
+                    {OUTCOME_RESULTS.map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        role="radio"
+                        aria-checked={outcome === r}
+                        onClick={() => setOutcome(r)}
+                        className={`flex-1 rounded-md border px-3 py-2 text-[12px] font-medium uppercase tracking-[0.12em] ${
+                          outcome === r ? "border-ink bg-ink text-white" : "border-line hover:bg-gray-bg"
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={!canSave || saving}
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-6 py-2.5 text-[12px] font-medium uppercase tracking-[0.12em] text-white hover:bg-ink-soft disabled:opacity-50"
+                >
+                  <Check size={15} /> {saving ? "Saving..." : "Save status"}
+                </button>
+              </>
+            )}
+          </Card>
         </div>
       </div>
 
-      {/* TOAST NOTIFICATION */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl2 bg-ink px-5 py-3.5 text-sm font-medium text-white shadow-lg animate-rise">
-          <i className="ti ti-circle-check text-lg text-lime" />
-          {toast}
-        </div>
-      )}
-    </LayoutWrapper>
+      <Toast message={toast} />
+    </ProviderShell>
   );
 }

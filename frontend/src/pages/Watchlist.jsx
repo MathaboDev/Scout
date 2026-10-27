@@ -1,490 +1,373 @@
-import { useEffect, useState } from "react";
-import { Bookmark, CheckCircle, Trash2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import Sidebar from "../components/SideBar.jsx";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { Bell, Bookmark, CheckCircle, Download, Trash2, X } from "lucide-react";
+import AppShell from "../components/AppShell.jsx";
+import StatusBadge, { StatusTimeline } from "../components/StatusBadge.jsx";
+import { CompanyAvatar, SkeletonCard, UrgencyLabel } from "../components/ui.jsx";
+import { api } from "../lib/api.js";
+import { POLL_INTERVAL_MS, closingLabel, formatDate } from "../lib/constants.js";
+
+// Student dashboard: FR5 (receipts + summary report), FR6 (live status),
+// FR7 (bookmarks + notifications).
+//
+// "Live" = polls the API every 15 s while the tab is visible, which keeps
+// status changes inside NFR2's 30-second window without websockets.
 
 export default function Watchlist() {
-  const navigate = useNavigate();
+  const [applications, setApplications] = useState([]);
+  const [bookmarks, setBookmarks] = useState([]);
+  const [notifications, setNotifications] = useState({ unread_count: 0, results: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
+  const [receipt, setReceipt] = useState(null);
+  const [downloading, setDownloading] = useState(false);
+  const lastStatuses = useRef(null);
 
-  const [showAllBookmarks, setShowAllBookmarks] = useState(false);
-  const [showAllApplied, setShowAllApplied] = useState(false);
+  const refreshLive = useCallback(async () => {
+    const [apps, notes] = await Promise.all([api.myApplications(), api.notifications()]);
 
-  const [bookmarkedJobs, setBookmarkedJobs] = useState([]);
-  const [savedApplications, setSavedApplications] = useState([]);
+    // Announce any status that changed since the last poll.
+    const previous = lastStatuses.current;
+    if (previous) {
+      const changed = apps.results.find(
+        (a) => previous[a.application_id] && previous[a.application_id] !== statusKey(a)
+      );
+      if (changed) setToast(`${changed.opportunity_title}: ${statusText(changed)}`);
+    }
+    lastStatuses.current = Object.fromEntries(apps.results.map((a) => [a.application_id, statusKey(a)]));
 
-  const [user, setUser] = useState({
-    fullName: "",
-  });
-
-  /*
-   * Load user, bookmarks and applications
-   */
-  useEffect(() => {
-    const savedUser =
-      JSON.parse(localStorage.getItem("user")) || {};
-
-    const savedBookmarks =
-      JSON.parse(localStorage.getItem("bookmarkedJobs")) || [];
-
-    const savedApplications =
-      JSON.parse(localStorage.getItem("applications")) || [];
-
-    setUser(savedUser);
-    setBookmarkedJobs(savedBookmarks);
-    setSavedApplications(savedApplications);
+    setApplications(apps.results);
+    setNotifications(notes);
   }, []);
 
-  /*
-   * Remove bookmark
-   */
-  const removeBookmark = (jobId) => {
-    const updatedBookmarks = bookmarkedJobs.filter(
-      (job) => job.id !== jobId
-    );
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([refreshLive(), api.listBookmarks().then((b) => !cancelled && setBookmarks(b.results))])
+      .catch((err) => !cancelled && setError(err.message))
+      .finally(() => !cancelled && setLoading(false));
 
-    setBookmarkedJobs(updatedBookmarks);
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") refreshLive().catch(() => {});
+    }, POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [refreshLive]);
 
-    localStorage.setItem(
-      "bookmarkedJobs",
-      JSON.stringify(updatedBookmarks)
-    );
-  };
+  useEffect(() => {
+    if (!toast) return undefined;
+    const t = setTimeout(() => setToast(""), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
-  /*
-   * Check if opportunity is expired
-   */
-  const isExpired = (job) => {
-    if (!job.closingDate) return false;
-
-    return new Date(job.closingDate) < new Date();
-  };
-
-  /*
-   * Format closing date
-   */
-  const formatClosingDate = (date) => {
-    if (!date) return "Closing date unavailable";
-
-    const closingDate = new Date(date);
-    const today = new Date();
-
-    const difference =
-      closingDate.getTime() - today.getTime();
-
-    const daysLeft = Math.ceil(
-      difference / (1000 * 60 * 60 * 24)
-    );
-
-    if (daysLeft < 0) {
-      return `Closed ${closingDate.toLocaleDateString(
-        "en-ZA",
-        {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        }
-      )}`;
+  async function openReceipt(applicationId) {
+    try {
+      setReceipt(await api.getReceipt(applicationId));
+    } catch (err) {
+      setError(err.message);
     }
+  }
 
-    if (daysLeft === 0) {
-      return "Closes today";
+  async function removeBookmark(opportunityId) {
+    const before = bookmarks;
+    setBookmarks((rows) => rows.filter((b) => b.opportunity_id !== opportunityId));
+    try {
+      await api.removeBookmark(opportunityId);
+    } catch (err) {
+      setBookmarks(before);
+      setError(err.message);
     }
+  }
 
-    if (daysLeft <= 7) {
-      return `Closes in ${daysLeft} day${
-        daysLeft === 1 ? "" : "s"
-      }`;
+  async function markAllRead() {
+    try {
+      await api.markAllNotificationsRead();
+      setNotifications((n) => ({
+        unread_count: 0,
+        results: n.results.map((r) => ({ ...r, is_read: true })),
+      }));
+    } catch (err) {
+      setError(err.message);
     }
+  }
 
-    return `Closes ${closingDate.toLocaleDateString(
-      "en-ZA",
-      {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }
-    )}`;
-  };
-
-  /*
-   * Format application date
-   */
-  const formatApplicationDate = (date) => {
-    if (!date) return "Application submitted";
-
-    return `Applied ${new Date(date).toLocaleDateString(
-      "en-ZA",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }
-    )}`;
-  };
-
-  /*
-   * Status styling
-   */
-  const getStatusStyle = (status) => {
-    if (status === "Accepted") {
-      return "bg-lime/20 text-lime-ink";
+  async function downloadSummary() {
+    setDownloading(true);
+    try {
+      const pdf = await api.applicationSummaryPdf();
+      saveFile(pdf, `scout-applications-${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDownloading(false);
     }
+  }
 
-    if (status === "Rejected") {
-      return "bg-gray-bg text-muted";
-    }
-
-    if (status === "Under review") {
-      return "bg-lime/20 text-lime-ink";
-    }
-
-    return "bg-gray-bg text-muted";
+  const counts = {
+    total: applications.length,
+    submitted: applications.filter((a) => a.status === "Submitted").length,
+    review: applications.filter((a) => a.status === "Under Review").length,
+    outcome: applications.filter((a) => a.status === "Outcome Received").length,
   };
 
   return (
-    <div className="flex min-h-screen bg-cream text-ink">
+    <AppShell title="My applications" subtitle="Live status, receipts, bookmarks and notifications in one place.">
+      {error && <div className="mt-6 rounded-[10px] bg-amber-bg px-4 py-3 text-sm text-[#966B1F]">{error}</div>}
 
-      {/* =================================
-          SIDEBAR
-      ================================= */}
-
-      <Sidebar user={user} />
-
-
-      {/* =================================
-          MAIN CONTENT
-      ================================= */}
-
-      <main className="w-full max-w-[1100px] px-6 py-10 md:px-12">
-
-        {/* Header */}
-
-        <h1 className="text-[28px] font-bold">
-          Watchlist
-        </h1>
-
-        <p className="mt-2 text-sm text-muted">
-          Your bookmarked job opportunities in one
-          place.
-        </p>
-
-
-        {/* =================================
-            APPLIED JOBS
-        ================================= */}
-
-        <section className="mt-8">
-
-          <div className="mb-4 flex items-center justify-between">
-
-            <h2 className="text-[17px] font-bold">
-              Applied jobs
-            </h2>
-
-            {savedApplications.length > 3 && (
-              <button
-                type="button"
-                onClick={() =>
-                  setShowAllApplied(
-                    !showAllApplied
-                  )
-                }
-                className="text-xs font-bold text-muted hover:text-ink"
-              >
-                {showAllApplied
-                  ? "Show less"
-                  : "View all"}
-              </button>
-            )}
-
+      {/* ---------- summary tiles + report ---------- */}
+      <section className="mt-7 grid grid-cols-2 gap-3 md:grid-cols-4">
+        {[
+          ["Total", counts.total],
+          ["Submitted", counts.submitted],
+          ["Under review", counts.review],
+          ["Outcome received", counts.outcome],
+        ].map(([label, n]) => (
+          <div key={label} className="rounded-2xl border border-line bg-white px-4 py-3">
+            <p className="text-3xl font-medium tracking-tight leading-none">{n}</p>
+            <p className="mt-1.5 text-xs text-muted">{label}</p>
           </div>
+        ))}
+      </section>
 
+      {/* ---------- applications (FR6) ---------- */}
+      <section className="mt-8">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-medium tracking-tight">Applications</h2>
+          <button
+            type="button"
+            onClick={downloadSummary}
+            disabled={downloading || applications.length === 0}
+            className="flex h-10 items-center gap-2 rounded-md border border-black/15 bg-white px-4 text-[12px] font-medium uppercase tracking-[0.12em] transition-colors hover:bg-ink hover:text-white disabled:opacity-50"
+          >
+            <Download size={14} /> {downloading ? "Preparing PDF..." : "Download PDF report"}
+          </button>
+        </div>
 
-          {savedApplications.length === 0 ? (
-
-            /* Empty applied state */
-
-            <div className="rounded-2xl border border-line bg-white px-6 py-10 text-center shadow-sm">
-
-              <CheckCircle
-                size={28}
-                className="mx-auto text-muted"
-              />
-
-              <h3 className="mt-3 text-sm font-bold">
-                No applications yet
-              </h3>
-
-              <p className="mt-1 text-xs text-muted">
-                Applications you submit will appear
-                here.
-              </p>
-
-              <button
-                type="button"
-                onClick={() =>
-                  navigate("/eligible")
-                }
-                className="mt-4 rounded-[10px] bg-ink px-4 py-2.5 text-xs font-bold text-white hover:opacity-90"
+        {loading ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        ) : applications.length === 0 ? (
+          <EmptyState
+            icon={CheckCircle}
+            title="No applications yet"
+            text="Applications you submit will appear here with their live status."
+          />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {applications.map((a) => (
+              <article
+                key={a.application_id}
+                className="flex flex-col rounded-2xl border border-line bg-white p-5"
               >
-                Browse opportunities
-              </button>
-
-            </div>
-
-          ) : (
-
-            /* Applied jobs */
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-
-              {(showAllApplied
-                ? savedApplications
-                : savedApplications.slice(0, 3)
-              ).map((application) => (
-
-                <div
-                  key={application.id}
-                  className="min-h-[160px] rounded-2xl border border-line bg-white p-[18px] shadow-sm"
-                >
-
-                  <div className="flex items-start gap-3">
-
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] bg-gray-bg text-xs font-bold">
-                      {application.company
-                        ? application.company[0].toUpperCase()
-                        : "S"}
-                    </div>
-
-                    <div className="min-w-0">
-
-                      <h3 className="text-[13px] font-bold">
-                        {application.jobTitle}
-                      </h3>
-
-                      <p className="mt-1 text-[11px] leading-4 text-muted">
-                        {application.company} ·{" "}
-                        {application.location}
-                      </p>
-
-                    </div>
-
+                <div className="flex items-start gap-3">
+                  <CompanyAvatar name={a.company_name} size="sm" />
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold leading-snug">{a.opportunity_title}</h3>
+                    <p className="mt-0.5 truncate text-xs text-muted">{a.company_name}</p>
                   </div>
-
-
-                  <p className="mt-[17px] text-[10px] text-muted">
-                    {formatApplicationDate(
-                      application.submittedAt
-                    )}
-                  </p>
-
-
-                  <span
-                    className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${getStatusStyle(
-                      application.status
-                    )}`}
-                  >
-                    {application.status ||
-                      "Submitted"}
-                  </span>
-
                 </div>
+                <div className="mt-4">
+                  <StatusBadge status={a.status} outcome={a.outcome_result} />
+                </div>
+                <p className="mt-3 text-[11px] text-muted">
+                  Applied {formatDate(a.submitted_at)} · {a.reference_number}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => openReceipt(a.application_id)}
+                  className="mt-4 w-full rounded-md border border-ink px-4 py-2 text-[12px] font-medium uppercase tracking-[0.12em] text-ink transition-colors hover:bg-ink hover:text-white"
+                >
+                  View receipt
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
+      <div className="mt-10 grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+        {/* ---------- bookmarks (FR7) ---------- */}
+        <section>
+          <h2 className="mb-4 text-xl font-medium tracking-tight">Bookmarked opportunities</h2>
+          {bookmarks.length === 0 ? (
+            <EmptyState
+              icon={Bookmark}
+              title="No bookmarks"
+              text="Bookmark opportunities you're not ready to apply for. We'll remind you 3 days before they close."
+            />
+          ) : (
+            <ul className="space-y-3">
+              {bookmarks.map((b) => (
+                <li
+                  key={b.bookmark_id}
+                  className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white p-4 ${
+                    b.is_closed ? "opacity-60" : ""
+                  }`}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <CompanyAvatar name={b.company_name} size="sm" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold">{b.title}</p>
+                      <p className="text-xs text-muted">{b.company_name}</p>
+                      <div className="mt-1.5">
+                        <UrgencyLabel date={b.closing_date} label={closingLabel(b.closing_date)} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={`/jobs/${b.opportunity_id}`}
+                      className="rounded-md bg-ink px-3.5 py-2 text-[12px] font-medium uppercase tracking-[0.12em] text-white"
+                    >
+                      View
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => removeBookmark(b.opportunity_id)}
+                      aria-label={`Remove bookmark for ${b.title}`}
+                      className="rounded-[10px] p-2 text-muted hover:bg-gray-bg hover:text-ink"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </li>
               ))}
-
-            </div>
-
+            </ul>
           )}
-
         </section>
 
-
-        {/* =================================
-            BOOKMARKED OPPORTUNITIES
-        ================================= */}
-
-        <section className="mt-10">
-
+        {/* ---------- notifications (FR7) ---------- */}
+        <section>
           <div className="mb-4 flex items-center justify-between">
-
-            <h2 className="text-[17px] font-bold">
-              Bookmarked opportunities
+            <h2 className="flex items-center gap-2 text-xl font-medium tracking-tight">
+              Notifications
+              {notifications.unread_count > 0 && (
+                <span className="rounded-full bg-lime px-2 py-0.5 text-[11px] text-ink">
+                  {notifications.unread_count} new
+                </span>
+              )}
             </h2>
-
-            {bookmarkedJobs.length > 3 && (
-              <button
-                type="button"
-                onClick={() =>
-                  setShowAllBookmarks(
-                    !showAllBookmarks
-                  )
-                }
-                className="text-xs font-bold text-muted hover:text-ink"
-              >
-                {showAllBookmarks
-                  ? "Show less"
-                  : "View all"}
+            {notifications.unread_count > 0 && (
+              <button type="button" onClick={markAllRead} className="text-xs font-bold text-muted hover:text-ink">
+                Mark all read
               </button>
             )}
-
           </div>
-
-
-          {bookmarkedJobs.length === 0 ? (
-
-            /* Empty bookmark state */
-
-            <div className="rounded-2xl border border-line bg-white px-6 py-10 text-center shadow-sm">
-
-              <Bookmark
-                size={28}
-                className="mx-auto text-muted"
-              />
-
-              <h3 className="mt-3 text-sm font-bold">
-                No bookmarked opportunities
-              </h3>
-
-              <p className="mt-1 text-xs text-muted">
-                Bookmark opportunities you're
-                interested in and they will appear
-                here.
-              </p>
-
-              <button
-                type="button"
-                onClick={() =>
-                  navigate("/eligible")
-                }
-                className="mt-4 rounded-[10px] bg-ink px-4 py-2.5 text-xs font-bold text-white hover:opacity-90"
-              >
-                Browse opportunities
-              </button>
-
-            </div>
-
+          {notifications.results.length === 0 ? (
+            <EmptyState icon={Bell} title="Nothing yet" text="Submissions, status changes and reminders show up here." />
           ) : (
-
-            /* Bookmarked jobs */
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-
-              {(showAllBookmarks
-                ? bookmarkedJobs
-                : bookmarkedJobs.slice(0, 3)
-              ).map((job) => {
-
-                const expired = isExpired(job);
-
-                return (
-                  <div
-                    key={job.id}
-                    className={`rounded-2xl border border-line bg-white p-[18px] shadow-sm ${
-                      expired
-                        ? "opacity-65"
-                        : ""
-                    }`}
-                  >
-
-                    {/* Job heading */}
-
-                    <div className="flex items-start gap-3">
-
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] bg-gray-bg text-xs font-bold">
-                        {job.letter ||
-                          job.company?.[0] ||
-                          "S"}
-                      </div>
-
-                      <div className="min-w-0">
-
-                        <h3 className="text-[13px] font-bold">
-                          {job.title}
-                        </h3>
-
-                        <p className="mt-1 text-[11px] leading-4 text-muted">
-                          {job.company} ·{" "}
-                          {job.location}
-                        </p>
-
-                      </div>
-
-                    </div>
-
-
-                    {/* Job type */}
-
-                    <span
-                      className={`mt-[18px] inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${
-                        expired
-                          ? "bg-gray-bg text-muted"
-                          : "bg-lime/60 text-ink"
-                      }`}
-                    >
-                      {job.type ||
-                        "Opportunity"}
-                    </span>
-
-
-                    {/* Closing date */}
-
-                    <p
-                      className={`mt-[13px] text-[10px] ${
-                        expired
-                          ? "text-muted"
-                          : "font-bold text-lime-ink"
-                      }`}
-                    >
-                      {formatClosingDate(
-                        job.closingDate
-                      )}
-                    </p>
-
-
-                    {/* View details */}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        navigate(
-                          `/jobs/${job.id}`,
-                          {
-                            state: {
-                              job,
-                            },
-                          }
-                        )
-                      }
-                      className="mt-4 w-full rounded-[10px] bg-ink px-4 py-2.5 text-sm font-bold text-white hover:opacity-90"
-                    >
-                      View details
-                    </button>
-
-
-                    {/* Remove bookmark */}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        removeBookmark(job.id)
-                      }
-                      className="mt-2 flex w-full items-center justify-center gap-1.5 py-1 text-[11px] font-semibold text-muted hover:text-ink"
-                    >
-                      <Trash2 size={13} />
-                      Remove bookmark
-                    </button>
-
+            <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
+              {notifications.results.map((n) => (
+                <li key={n.notification_id} className="flex gap-3 p-4">
+                  <span
+                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.is_read ? "bg-transparent" : "bg-lime-ink"}`}
+                    aria-hidden="true"
+                  />
+                  <div>
+                    <p className={`text-sm ${n.is_read ? "text-muted" : "font-semibold"}`}>{n.message}</p>
+                    <p className="mt-0.5 text-[11px] text-muted">{formatDate(n.sent_at, true)}</p>
                   </div>
-                );
-              })}
-
-            </div>
-
+                </li>
+              ))}
+            </ul>
           )}
-
         </section>
+      </div>
 
-      </main>
+      {receipt && <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />}
+
+      {toast && (
+        <div
+          role="status"
+          className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl2 bg-ink px-5 py-3.5 text-sm font-semibold text-white shadow-lg"
+        >
+          {toast}
+        </div>
+      )}
+    </AppShell>
+  );
+}
+
+function statusKey(a) {
+  return `${a.status}|${a.outcome_result || ""}`;
+}
+
+function statusText(a) {
+  return a.status === "Outcome Received" && a.outcome_result ? `Outcome: ${a.outcome_result}` : `now ${a.status}`;
+}
+
+function EmptyState({ icon: Icon, title, text }) {
+  return (
+    <div className="rounded-2xl border border-line bg-white px-6 py-10 text-center">
+      <Icon size={22} className="mx-auto text-muted" />
+      <h3 className="mt-3 text-sm font-bold">{title}</h3>
+      <p className="mx-auto mt-1 max-w-xs text-xs text-muted">{text}</p>
+      <Link
+        to="/eligible"
+        className="mt-4 inline-block rounded-md bg-ink px-4 py-2.5 text-[12px] font-medium uppercase tracking-[0.12em] text-white"
+      >
+        Browse opportunities
+      </Link>
     </div>
   );
+}
+
+function ReceiptModal({ receipt, onClose }) {
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-ink/40 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Application receipt"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Receipt</p>
+            <p className="mt-1 text-xl font-medium tracking-tight">{receipt.reference_number}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="text-muted hover:text-ink">
+            <X size={18} />
+          </button>
+        </div>
+        <dl className="mt-5 divide-y divide-line border-y border-line text-sm">
+          {[
+            ["Name", receipt.student_name],
+            ["Opportunity", receipt.opportunity_title],
+            ["Provider", receipt.company_name],
+            ["Submitted", formatDate(receipt.submitted_at, true)],
+          ].map(([label, value]) => (
+            <div key={label} className="flex justify-between gap-4 py-2.5">
+              <dt className="text-muted">{label}</dt>
+              <dd className="text-right font-semibold">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="mt-5">
+          <StatusTimeline status={receipt.status} outcome={receipt.outcome_result} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// FR5: save a file the API returned (the PDF summary report).
+// The browser can only "download" a link, so we point a temporary link
+// at the file in memory, click it, then free the memory.
+function saveFile(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }

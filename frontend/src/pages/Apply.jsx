@@ -1,486 +1,228 @@
-import { useState, useEffect } from "react";
-import {
-  ArrowLeft,
-  CheckCircle,
-  AlertCircle,
-} from "lucide-react";
-import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import Sidebar from "../components/Sidebar"; 
-import { getListingById, seedData } from "../api/dataService.js"; 
+import { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { AlertCircle, ArrowLeft, CheckCircle, FileText, UploadCloud } from "lucide-react";
+import AppShell from "../components/AppShell.jsx";
+import { StatusTimeline } from "../components/StatusBadge.jsx";
+import { api } from "../lib/api.js";
+import { formatDate, ordinalYear } from "../lib/constants.js";
+
+// FR3 + FR4 assisted application.
+//
+//   1 details    pre-filled from the STORED profile (read-only here;
+//                edits happen on the profile page so the matching data
+//                and the submitted data can never disagree)
+//   2 documents  only if a required document is missing; upload here
+//   3 review     everything that will be sent; nothing goes out until
+//                "Confirm & submit" is clicked
+//   4 receipt    reference number + live status
+//
+// The FR4 email links to /apply/<id>?resume=documents, which lands on
+// step 2, or straight on step 3 if the documents are already there.
+
+const STEPS = ["details", "documents", "review", "done"];
+const DOC_ACCEPT = ".pdf,.jpg,.jpeg,.png";
 
 export default function Apply() {
+  const { opportunityId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { opportunityId } = useParams(); // Grabs ID from URL if coming from email
-  const [searchParams] = useSearchParams(); // Grabs the ?step=2 from URL
-  
-  // State for job (loads from state if clicked normally, or fetches if from email)
-  const [job, setJob] = useState(location.state?.job || null);
-  const [isLoading, setIsLoading] = useState(!location.state?.job);
+  const resuming = searchParams.get("resume") === "documents";
 
-  // If user opens from email link, fetch the job by ID
+  const [review, setReview] = useState(null);
+  const [step, setStep] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [blocking, setBlocking] = useState(null); // {message, code}
+  const [error, setError] = useState("");
+  const [uploading, setUploading] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [receipt, setReceipt] = useState(null);
+
+  const loadReview = useCallback(async () => {
+    const data = await api.reviewApplication(Number(opportunityId));
+    setReview(data);
+    return data;
+  }, [opportunityId]);
+
   useEffect(() => {
-    if (!job && opportunityId) {
-      seedData(); // Ensure data exists
-      const foundJob = getListingById(opportunityId);
-      setJob(foundJob || null);
-      setIsLoading(false);
-    }
-  }, [job, opportunityId]);
-
-  /*
-   * Get the student's profile from localStorage.
-   */
-  const savedUser = JSON.parse(localStorage.getItem("user")) || {};
-
-  /*
-   * Application steps:
-   * 1 = Application form
-   * 2 = Missing documents
-   * 3 = Review application
-   * 4 = Application submitted + status
-   */
-  
-  // Determine starting step (if email link has ?step=2, start at 2)
-  const urlStep = searchParams.get("step");
-  const [step, setStep] = useState(urlStep === "2" ? 2 : 1);
-
-  const [formData, setFormData] = useState({
-    fullName: savedUser.fullName || savedUser.full_name || "",
-    email: savedUser.email || "",
-    phone: savedUser.phone || "",
-    institution: savedUser.institution || "CPUT",
-    fieldOfStudy: savedUser.fieldOfStudy || "",
-    yearOfStudy: savedUser.yearOfStudy || "",
-  });
-
-  const [documents, setDocuments] = useState({
-    cv: null,
-    id: null,
-  });
-
-  const [applicationId, setApplicationId] = useState("");
-
-  
-  const PageLayout = ({ children }) => (
-    <div className="flex h-screen w-full bg-cream overflow-hidden font-sans">
-      <Sidebar active="eligible" />
-      <main className="flex-1 h-full overflow-y-auto p-6 lg:p-10">
-        {children}
-      </main>
-    </div>
-  );
-
-  // --- LOADING STATE ---
-  if (isLoading) {
-    return (
-      <PageLayout>
-        <div className="flex h-full items-center justify-center text-muted">
-          Loading application...
-        </div>
-      </PageLayout>
-    );
-  }
-
-  // --- NOT FOUND STATE ---
-  if (!job) {
-    return (
-      <PageLayout>
-        <button
-          type="button"
-          onClick={() => navigate("/eligible")}
-          className="flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink mb-8"
-        >
-          <ArrowLeft size={17} /> Back to opportunities
-        </button>
-
-        <div className="mx-auto mt-10 max-w-[700px] rounded-2xl border border-line bg-white p-8 text-center">
-          <h1 className="text-xl font-bold text-ink">Opportunity not found</h1>
-          <p className="mt-2 text-sm text-muted">
-            We couldn't load the opportunity you are trying to apply for.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate("/eligible")}
-            className="mt-5 rounded-[10px] bg-ink px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
-          >
-            Back to opportunities
-          </button>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  /*
-   * Check whether the opportunity is closed.
-   */
-  const isExpired = new Date(job.closingDate) < new Date();
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleDocumentUpload = (documentName, file) => {
-    if (!file) return;
-    setDocuments((prev) => ({ ...prev, [documentName]: file }));
-  };
-
-  /*
-   * FR4 — Missing Documents Detection
-   */
-  const missingDocuments = [];
-  if (!documents.cv) missingDocuments.push("CV");
-  if (!documents.id) missingDocuments.push("ID document");
-
-  const hasMissingDocuments = missingDocuments.length > 0;
-
-  const handleContinue = () => {
-    if (hasMissingDocuments) {
-      setStep(2);
-      return;
-    }
-    setStep(3);
-  };
-
-  const handleDocumentsContinue = () => {
-    if (hasMissingDocuments) return;
-    setStep(3);
-  };
-
-  /*
-   * Submit the application.
-   */
-  const handleSubmit = () => {
-    const generatedId = `SC-${Date.now().toString().slice(-6)}`;
-
-    const application = {
-      id: generatedId,
-      jobId: job.id,
-      jobTitle: job.title,
-      company: job.company,
-      location: job.location,
-      submittedAt: new Date().toISOString(),
-      status: "Submitted",
-      applicant: formData,
-      documents: {
-        cv: documents.cv?.name || null,
-        id: documents.id?.name || null,
-      },
+    let cancelled = false;
+    loadReview()
+      .then((data) => {
+        if (cancelled) return;
+        if (resuming) setStep(data.can_submit ? "review" : "documents");
+        else setStep("details");
+      })
+      .catch((err) => !cancelled && setBlocking({ message: err.message, code: err.code }))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
     };
+  }, [loadReview, resuming]);
 
-    const existingApplications = JSON.parse(localStorage.getItem("applications")) || [];
+  async function handleUpload(documentType, file) {
+    if (!file) return;
+    setError("");
+    setUploading(documentType);
+    try {
+      await api.uploadDocument(documentType, file);
+      const data = await loadReview();
+      if (data.can_submit) setStep("review"); // FR4: resume straight at review
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading("");
+    }
+  }
 
-    localStorage.setItem(
-      "applications",
-      JSON.stringify([...existingApplications, application])
-    );
+  async function handleConfirm() {
+    setError("");
+    setSubmitting(true);
+    try {
+      const data = await api.confirmApplication(Number(opportunityId));
+      setReceipt(data.application);
+      setStep("done");
+    } catch (err) {
+      if (err.code === "missing_documents") {
+        await loadReview();
+        setStep("documents");
+      }
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
-    setApplicationId(generatedId);
-    setStep(4);
-  };
-
-  const getApplicationStatus = () => {
-    const applications = JSON.parse(localStorage.getItem("applications")) || [];
-    const currentApplication = applications.find((app) => app.id === applicationId);
-    return currentApplication?.status || "Submitted";
-  };
-
-  /*
-   * STEP 4 — RECEIPT + APPLICATION STATUS
-   */
-  if (step === 4) {
-    const currentStatus = getApplicationStatus();
-
+  // ---------- loading / blocked ----------
+  if (loading) {
     return (
-      <PageLayout>
-        <div className="mx-auto max-w-[760px] mt-6">
-          <div className="rounded-2xl border border-line bg-white p-8 shadow-sm md:p-10">
-            {/* Success */}
-            <div className="flex flex-col items-center text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-lime/20">
-                <CheckCircle size={34} className="text-lime-ink" />
+      <AppShell title="Application">
+        <p className="mt-6 text-sm text-muted">Preparing your application...</p>
+      </AppShell>
+    );
+  }
+
+  if (blocking) {
+    const action =
+      blocking.code === "profile_incomplete"
+        ? { to: "/profile", label: "Complete your profile" }
+        : blocking.code === "already_applied"
+        ? { to: "/watchlist", label: "View my applications" }
+        : { to: "/eligible", label: "Back to opportunities" };
+    return (
+      <AppShell title="Application">
+        <div className="mx-auto mt-8 max-w-[640px] rounded-2xl border border-line bg-white p-8 text-center">
+          <AlertCircle size={28} className="mx-auto text-muted" />
+          <p className="mt-3 text-sm font-semibold">{blocking.message}</p>
+          <Link
+            to={action.to}
+            className="mt-5 inline-block rounded-md bg-ink px-5 py-2.5 text-[12px] font-medium uppercase tracking-[0.12em] text-white"
+          >
+            {action.label}
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const { applicant, opportunity, documents, missing_documents: missing, can_submit } = review;
+  const stepNumber = STEPS.indexOf(step) + 1;
+
+  // ---------- receipt ----------
+  if (step === "done" && receipt) {
+    return (
+      <AppShell title="Application submitted">
+        <div className="mx-auto mt-6 max-w-[720px] rounded-2xl border border-line bg-white p-8 shadow-sm md:p-10">
+          <div className="text-center">
+            <CheckCircle size={40} className="mx-auto text-lime-ink" />
+            <h2 className="mt-4 text-3xl font-medium tracking-tight">You're in</h2>
+            <p className="mt-2 text-sm text-muted">
+              A copy of this receipt has been sent to {receipt.email}.
+            </p>
+          </div>
+
+          <div className="mt-8 rounded-xl bg-gray-bg p-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Reference number</p>
+            <p className="mt-1 text-xl font-medium tracking-tight">{receipt.reference_number}</p>
+          </div>
+
+          <dl className="mt-5 divide-y divide-line border-t border-line text-sm">
+            {[
+              ["Name", receipt.student_name],
+              ["Opportunity", receipt.opportunity_title],
+              ["Provider", receipt.company_name],
+              ["Submitted", formatDate(receipt.submitted_at, true)],
+            ].map(([label, value]) => (
+              <div key={label} className="flex justify-between gap-4 py-2.5">
+                <dt className="text-muted">{label}</dt>
+                <dd className="text-right font-semibold">{value}</dd>
               </div>
+            ))}
+          </dl>
 
-              <h1 className="mt-5 text-2xl font-bold text-ink">
-                Application submitted
-              </h1>
+          <div className="mt-7 rounded-2xl border border-line p-5">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted">Status</p>
+            <StatusTimeline status={receipt.status} outcome={receipt.outcome_result} />
+          </div>
 
-              <p className="mt-2 max-w-[500px] text-sm leading-6 text-muted">
-                Your application for{" "}
-                <span className="font-semibold text-ink">{job.title}</span> at{" "}
-                <span className="font-semibold text-ink">{job.company}</span> has been submitted successfully.
-              </p>
-            </div>
-
-            {/* Application reference */}
-            <div className="mt-8 rounded-xl bg-gray-bg p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Application reference
-              </p>
-              <p className="mt-2 text-lg font-bold text-ink">{applicationId}</p>
-            </div>
-
-            {/* Application details */}
-            <div className="mt-5 border-t border-line pt-5">
-              <div className="flex justify-between gap-4 py-2">
-                <span className="text-sm text-muted">Opportunity</span>
-                <span className="text-right text-sm font-semibold text-ink">{job.title}</span>
-              </div>
-
-              <div className="flex justify-between gap-4 py-2">
-                <span className="text-sm text-muted">Company</span>
-                <span className="text-right text-sm font-semibold text-ink">{job.company}</span>
-              </div>
-
-              <div className="flex justify-between gap-4 py-2">
-                <span className="text-sm text-muted">Submitted</span>
-                <span className="text-right text-sm font-semibold text-ink">
-                  {new Date().toLocaleDateString("en-ZA")}
-                </span>
-              </div>
-            </div>
-
-            {/* APPLICATION STATUS */}
-            <div className="mt-7 rounded-2xl border border-line p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                    Application status
-                  </p>
-                  <p className="mt-1 text-sm text-muted">Track the progress of your application.</p>
-                </div>
-
-                <span
-                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                    currentStatus === "Accepted"
-                      ? "bg-lime/20 text-lime-ink"
-                      : currentStatus === "Rejected"
-                      ? "bg-gray-bg text-muted"
-                      : "bg-gray-bg text-ink"
-                  }`}
-                >
-                  {currentStatus}
-                </span>
-              </div>
-
-              {/* Status timeline */}
-              <div className="mt-6 space-y-5">
-                {/* Submitted */}
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime/20">
-                    <CheckCircle size={16} className="text-lime-ink" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-ink">Application submitted</p>
-                    <p className="mt-1 text-xs text-muted">Your application has been received.</p>
-                  </div>
-                </div>
-
-                {/* Under review */}
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                      currentStatus !== "Submitted" ? "bg-lime/20" : "bg-gray-bg"
-                    }`}
-                  >
-                    {currentStatus !== "Submitted" ? (
-                      <CheckCircle size={16} className="text-lime-ink" />
-                    ) : (
-                      <span className="h-2 w-2 rounded-full bg-muted" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-ink">Under review</p>
-                    <p className="mt-1 text-xs text-muted">The provider will review your application.</p>
-                  </div>
-                </div>
-
-                {/* Final decision */}
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                      currentStatus === "Accepted" || currentStatus === "Rejected" ? "bg-lime/20" : "bg-gray-bg"
-                    }`}
-                  >
-                    {currentStatus === "Accepted" || currentStatus === "Rejected" ? (
-                      <CheckCircle size={16} className="text-lime-ink" />
-                    ) : (
-                      <span className="h-2 w-2 rounded-full bg-muted" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-ink">Final decision</p>
-                    <p className="mt-1 text-xs text-muted">You will be notified when a decision is made.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => navigate("/eligible")}
-                className="flex-1 rounded-[10px] border border-line px-5 py-3 text-sm font-bold text-ink hover:bg-gray-bg transition"
-              >
-                Back to opportunities
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setStep(1);
-                  navigate("/apply", { replace: true }); // Clear URL params
-                }}
-                className="flex-1 rounded-[10px] bg-ink px-5 py-3 text-sm font-bold text-white hover:opacity-90 transition"
-              >
-                Apply to another opportunity
-              </button>
-            </div>
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            <Link
+              to="/eligible"
+              className="flex-1 rounded-md border border-black/15 px-5 py-3 text-center text-[12px] font-medium uppercase tracking-[0.12em] hover:bg-gray-bg"
+            >
+              Browse more opportunities
+            </Link>
+            <Link
+              to="/watchlist"
+              className="flex-1 rounded-md bg-ink px-5 py-3 text-center text-[12px] font-medium uppercase tracking-[0.12em] text-white hover:opacity-90"
+            >
+              Track my applications
+            </Link>
           </div>
         </div>
-      </PageLayout>
+      </AppShell>
     );
   }
 
-  /*
-   * MAIN APPLICATION UI (Steps 1, 2, 3)
-   */
   return (
-    <PageLayout>
-      <div className="mx-auto w-full max-w-[900px]">
-        {/* Back */}
+    <AppShell title={opportunity.title} subtitle={`${opportunity.company_name} · Application`}>
+      <div className="mx-auto mt-4 w-full max-w-[880px]">
         <button
           type="button"
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink transition"
+          onClick={() => navigate(`/jobs/${opportunity.opportunity_id}`)}
+          className="flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink"
         >
-          <ArrowLeft size={17} /> Back
+          <ArrowLeft size={17} /> Back to opportunity
         </button>
 
-        {/* Header */}
-        <div className="mt-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Application
-          </p>
-          <h1 className="mt-1 text-2xl font-bold text-ink">{job.title}</h1>
-          <p className="mt-1 text-sm text-muted">{job.company} · {job.location}</p>
-
-          {isExpired && (
-            <div className="mt-4 rounded-xl border border-line bg-gray-bg p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle size={19} className="mt-0.5 shrink-0 text-ink" />
-                <div>
-                  <p className="text-sm font-bold text-ink">This opportunity is closed</p>
-                  <p className="mt-1 text-xs text-muted">
-                    The closing date for this opportunity has passed, so new applications are no longer accepted.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Progress Bar */}
-        <div className="mt-7 flex items-center gap-2">
-          {[1, 2, 3, 4].map((item) => (
-            <div
-              key={item}
-              className={`h-1.5 flex-1 rounded-full ${
-                item <= step ? "bg-ink" : "bg-gray-bg"
-              }`}
-            />
+        <div className="mt-6 flex items-center gap-2" aria-hidden="true">
+          {STEPS.map((s, i) => (
+            <div key={s} className={`h-1.5 flex-1 rounded-full ${i < stepNumber ? "bg-ink" : "bg-gray-bg"}`} />
           ))}
         </div>
+        <p className="mt-2 text-xs text-muted">Step {stepNumber} of 4</p>
 
-        <p className="mt-2 text-xs text-muted">Step {step} of 4</p>
+        {error && (
+          <div className="mt-5 flex items-start gap-2 rounded-md bg-amber-bg px-4 py-3 text-sm text-[#966B1F]">
+            <AlertCircle size={16} className="mt-0.5 shrink-0" /> {error}
+          </div>
+        )}
 
-        {/* STEP 1 — FORM */}
-        {step === 1 && (
+        {/* ---------- STEP 1: pre-filled details ---------- */}
+        {step === "details" && (
           <section className="mt-6 rounded-2xl border border-line bg-white p-6 shadow-sm md:p-8">
-            <h2 className="text-lg font-bold text-ink">Your application</h2>
+            <h2 className="text-xl font-medium tracking-tight">Your details</h2>
             <p className="mt-1 text-sm text-muted">
-              We've pre-filled this form using information from your profile. Check that everything is correct.
+              Filled in from your Scout profile. Need to change something?{" "}
+              <Link to="/profile" className="font-bold text-lime-ink hover:underline">
+                Edit your profile
+              </Link>
+              .
             </p>
-
-            <div className="mt-6 grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-semibold text-ink">Full name</label>
-                <input
-                  type="text"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-[10px] border-[1.5px] border-line bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-ink transition"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-semibold text-ink">Email address</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-[10px] border-[1.5px] border-line bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-ink transition"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-semibold text-ink">Phone number</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-[10px] border-[1.5px] border-line bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-ink transition"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-semibold text-ink">Institution</label>
-                <input
-                  type="text"
-                  name="institution"
-                  value={formData.institution}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-[10px] border-[1.5px] border-line bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-ink transition"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-semibold text-ink">Field of study</label>
-                <input
-                  type="text"
-                  name="fieldOfStudy"
-                  value={formData.fieldOfStudy}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-[10px] border-[1.5px] border-line bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-ink transition"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-semibold text-ink">Year of study</label>
-                <input
-                  type="text"
-                  name="yearOfStudy"
-                  value={formData.yearOfStudy}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-[10px] border-[1.5px] border-line bg-cream px-3.5 py-3 text-sm text-ink outline-none focus:border-ink transition"
-                />
-              </div>
-            </div>
-
+            <ApplicantGrid applicant={applicant} />
             <div className="mt-7 flex justify-end">
               <button
                 type="button"
-                onClick={handleContinue}
-                disabled={isExpired}
-                className={`rounded-[10px] px-6 py-3 text-sm font-bold transition ${
-                  isExpired
-                    ? "cursor-not-allowed bg-gray-bg text-muted"
-                    : "bg-ink text-white hover:bg-ink-soft"
-                }`}
+                onClick={() => setStep(can_submit ? "review" : "documents")}
+                className="rounded-md bg-ink px-6 py-3 text-[12px] font-medium uppercase tracking-[0.12em] text-white hover:opacity-90"
               >
                 Continue
               </button>
@@ -488,114 +230,61 @@ export default function Apply() {
           </section>
         )}
 
-        {/* STEP 2 — MISSING DOCUMENTS / FR4 */}
-        {step === 2 && (
+        {/* ---------- STEP 2: missing documents (FR4) ---------- */}
+        {step === "documents" && (
           <section className="mt-6 rounded-2xl border border-line bg-white p-6 shadow-sm md:p-8">
-            <h2 className="text-lg font-bold text-ink">Required documents</h2>
-            <p className="mt-1 text-sm text-muted">
-              We checked your application and found that some required documents are missing.
-            </p>
-
-            {hasMissingDocuments && (
-              <div className="mt-6 flex items-start gap-3 rounded-xl border border-line bg-gray-bg p-4">
-                <AlertCircle size={21} className="mt-0.5 shrink-0 text-ink" />
-                <div>
-                  <p className="text-sm font-bold text-ink">Required documents missing</p>
-                  <p className="mt-1 text-xs leading-5 text-muted">
-                    Please upload the following documents before you can continue with your application:
-                  </p>
-                  <ul className="mt-2 list-disc pl-4 text-xs font-semibold text-ink">
-                    {missingDocuments.map((document) => (
-                      <li key={document}>{document}</li>
-                    ))}
-                  </ul>
-                </div>
+            <h2 className="text-xl font-medium tracking-tight">Required documents</h2>
+            {missing.length > 0 ? (
+              <div className="mt-4 rounded-xl border border-line bg-amber-bg p-4 text-sm text-[#966B1F]">
+                <p className="font-bold">Upload these to continue: {missing.map((m) => m.label).join(", ")}</p>
+                <p className="mt-1 text-xs">
+                  We've also emailed you a link back to this step. Uploads are saved to your profile, so you
+                  won't need them again for other applications.
+                </p>
               </div>
+            ) : (
+              <p className="mt-2 text-sm text-muted">All required documents are on file.</p>
             )}
 
-            <div className="mt-6 space-y-4">
-              {/* CV */}
-              <div className="rounded-xl border border-line p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-bold text-ink">CV / Resume</p>
-                    <p className="mt-1 text-xs text-muted">Required</p>
+            <div className="mt-5 space-y-3">
+              {missing.map((doc) => (
+                <div
+                  key={doc.document_type}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line p-4"
+                >
+                  <div className="flex items-center gap-2.5 text-sm font-semibold">
+                    <FileText size={16} className="text-muted" /> {doc.label}
                   </div>
-                  <label className="cursor-pointer rounded-[10px] bg-gray-bg px-4 py-2 text-xs font-bold text-ink hover:bg-line transition">
-                    {documents.cv ? "Replace" : "Upload"}
+                  <label className="flex cursor-pointer items-center gap-1.5 rounded-md bg-ink px-4 py-2 text-[12px] font-medium uppercase tracking-[0.12em] text-white">
+                    <UploadCloud size={14} />
+                    {uploading === doc.document_type ? "Uploading..." : "Upload"}
                     <input
                       type="file"
+                      accept={DOC_ACCEPT}
                       className="hidden"
-                      accept=".pdf,.doc,.docx"
-                      onChange={(e) => handleDocumentUpload("cv", e.target.files[0])}
+                      disabled={Boolean(uploading)}
+                      onChange={(e) => handleUpload(doc.document_type, e.target.files?.[0])}
                     />
                   </label>
                 </div>
-
-                {documents.cv ? (
-                  <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-lime-ink">
-                    <CheckCircle size={15} /> {documents.cv.name}
-                  </p>
-                ) : (
-                  <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-muted">
-                    <AlertCircle size={14} /> Document not uploaded
-                  </p>
-                )}
-              </div>
-
-              {/* ID */}
-              <div className="rounded-xl border border-line p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-bold text-ink">ID document</p>
-                    <p className="mt-1 text-xs text-muted">Required</p>
-                  </div>
-                  <label className="cursor-pointer rounded-[10px] bg-gray-bg px-4 py-2 text-xs font-bold text-ink hover:bg-line transition">
-                    {documents.id ? "Replace" : "Upload"}
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={(e) => handleDocumentUpload("id", e.target.files[0])}
-                    />
-                  </label>
-                </div>
-
-                {documents.id ? (
-                  <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-lime-ink">
-                    <CheckCircle size={15} /> {documents.id.name}
-                  </p>
-                ) : (
-                  <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-muted">
-                    <AlertCircle size={14} /> Document not uploaded
-                  </p>
-                )}
-              </div>
+              ))}
             </div>
-
-            {hasMissingDocuments && (
-              <div className="mt-5 rounded-xl border border-line bg-gray-bg p-4">
-                <p className="text-xs font-bold text-ink">You still need to upload:</p>
-                <p className="mt-1 text-xs text-muted">{missingDocuments.join(", ")}</p>
-              </div>
-            )}
+            <p className="mt-3 text-xs text-muted">PDF, JPG or PNG, up to 5 MB.</p>
 
             <div className="mt-7 flex justify-between gap-3">
               <button
                 type="button"
-                onClick={() => setStep(1)}
-                className="rounded-[10px] border border-line px-5 py-3 text-sm font-bold text-ink hover:bg-gray-bg transition"
+                onClick={() => setStep("details")}
+                className="rounded-md border border-black/15 px-5 py-3 text-[12px] font-medium uppercase tracking-[0.12em] hover:bg-gray-bg"
               >
                 Back
               </button>
               <button
                 type="button"
-                disabled={hasMissingDocuments}
-                onClick={handleDocumentsContinue}
-                className={`rounded-[10px] px-6 py-3 text-sm font-bold transition ${
-                  hasMissingDocuments
-                    ? "cursor-not-allowed bg-gray-bg text-muted"
-                    : "bg-ink text-white hover:bg-ink-soft"
+                disabled={!can_submit}
+                onClick={() => setStep("review")}
+                className={`rounded-md px-6 py-3 text-[12px] font-medium uppercase tracking-[0.12em] ${
+                  can_submit ? "bg-ink text-white hover:opacity-90" : "cursor-not-allowed bg-gray-bg text-muted"
                 }`}
               >
                 Continue to review
@@ -604,91 +293,81 @@ export default function Apply() {
           </section>
         )}
 
-        {/* STEP 3 — REVIEW */}
-        {step === 3 && (
+        {/* ---------- STEP 3: review & confirm (FR3) ---------- */}
+        {step === "review" && (
           <section className="mt-6 rounded-2xl border border-line bg-white p-6 shadow-sm md:p-8">
-            <h2 className="text-lg font-bold text-ink">Review your application</h2>
+            <h2 className="text-xl font-medium tracking-tight">Review your application</h2>
             <p className="mt-1 text-sm text-muted">
-              Please check your information before submitting. Nothing will be submitted until you confirm below.
+              This is exactly what {opportunity.company_name} will receive. Nothing is sent until you confirm.
             </p>
 
             <div className="mt-6 rounded-xl bg-gray-bg p-5">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">Applying for</p>
-              <p className="mt-2 text-base font-bold text-ink">{job.title}</p>
-              <p className="mt-1 text-sm text-muted">{job.company} · {job.location}</p>
-            </div>
-
-            <div className="mt-5">
-              <h3 className="text-sm font-bold text-ink">Applicant information</h3>
-              <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <p className="text-xs text-muted">Full name</p>
-                  <p className="mt-1 text-sm font-semibold text-ink">{formData.fullName || "Not provided"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted">Email</p>
-                  <p className="mt-1 text-sm font-semibold text-ink">{formData.email || "Not provided"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted">Phone</p>
-                  <p className="mt-1 text-sm font-semibold text-ink">{formData.phone || "Not provided"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted">Institution</p>
-                  <p className="mt-1 text-sm font-semibold text-ink">{formData.institution || "Not provided"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted">Field of study</p>
-                  <p className="mt-1 text-sm font-semibold text-ink">{formData.fieldOfStudy || "Not provided"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted">Year of study</p>
-                  <p className="mt-1 text-sm font-semibold text-ink">{formData.yearOfStudy || "Not provided"}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-7">
-              <h3 className="text-sm font-bold text-ink">Documents</h3>
-              <div className="mt-3 space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle size={16} className="text-lime-ink" />
-                  <span className="text-ink">CV / Resume</span>
-                  <span className="text-xs text-muted">({documents.cv?.name || "Not uploaded"})</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle size={16} className="text-lime-ink" />
-                  <span className="text-ink">ID document</span>
-                  <span className="text-xs text-muted">({documents.id?.name || "Not uploaded"})</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-7 rounded-xl border border-line bg-gray-bg p-4">
-              <p className="text-sm font-semibold text-ink">
-                By submitting this application, you confirm that the information provided is correct.
+              <p className="mt-1 font-bold">{opportunity.title}</p>
+              <p className="text-sm text-muted">
+                {opportunity.company_name} · closes {formatDate(opportunity.closing_date)}
               </p>
             </div>
 
-            <div className="mt-7 flex justify-between gap-3">
+            <h3 className="mt-6 text-sm font-bold">Applicant information</h3>
+            <ApplicantGrid applicant={applicant} />
+
+            <h3 className="mt-7 text-sm font-bold">Attached documents</h3>
+            <ul className="mt-3 space-y-2">
+              {documents.map((d) => (
+                <li key={d.document_id} className="flex items-center gap-2 text-sm">
+                  <CheckCircle size={16} className="text-lime-ink" />
+                  <span className="font-semibold">{d.file_name}</span>
+                  <span className="text-xs text-muted">({d.document_type.replace(/_/g, " ")})</span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-7 flex flex-wrap justify-between gap-3">
               <button
                 type="button"
-                onClick={() => setStep(1)}
-                className="rounded-[10px] border border-line px-5 py-3 text-sm font-bold text-ink hover:bg-gray-bg transition"
+                onClick={() => setStep("details")}
+                className="rounded-md border border-black/15 px-5 py-3 text-[12px] font-medium uppercase tracking-[0.12em] hover:bg-gray-bg"
               >
-                Edit application
+                Back
               </button>
               <button
                 type="button"
-                onClick={handleSubmit}
-                className="rounded-[10px] bg-ink px-6 py-3 text-sm font-bold text-white hover:bg-ink-soft transition"
+                onClick={handleConfirm}
+                disabled={submitting || !can_submit}
+                className="rounded-md bg-ink px-6 py-3 text-[12px] font-medium uppercase tracking-[0.12em] text-white hover:opacity-90 disabled:opacity-60"
               >
-                Confirm & submit
+                {submitting ? "Submitting..." : "Confirm & submit"}
               </button>
             </div>
           </section>
         )}
       </div>
-    </PageLayout>
+    </AppShell>
+  );
+}
+
+function ApplicantGrid({ applicant }) {
+  const isGraduate = applicant.student_type === "Graduate";
+  const rows = [
+    ["Full name", `${applicant.first_name} ${applicant.last_name}`],
+    ["Email", applicant.email],
+    ["Institution", applicant.institution],
+    ["Field of study", applicant.field_of_study],
+    isGraduate
+      ? ["Qualification", `${applicant.qualification} (${applicant.graduate_type})`]
+      : ["Year of study", ordinalYear(applicant.year_level)],
+    ["Academic average", `${applicant.academic_average}%`],
+    ["Province", applicant.province],
+  ];
+  return (
+    <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+      {rows.map(([label, value]) => (
+        <div key={label}>
+          <dt className="text-xs text-muted">{label}</dt>
+          <dd className="mt-1 text-sm font-semibold">{value || "Not provided"}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

@@ -7,21 +7,23 @@ export default {
         ink: "#101014",
         "ink-soft": "#1B1B20",
         "ink-line": "#2B2B30",
-        cream: "#F5F3EC",
-        lime: "#D7FF3D",
-        "lime-ink": "#4B5A0A",
-        muted: "#6B6A63",
-        line: "#E3E1D6",
+        cream: "#F3F3F1", // app page background (neutral, matches landing)
+        lime: "#E9E9E6", // neutral chip/badge fill inside the app
+        neon: "#D7FF3D", // landing page yellow-green
+        brand: "#E16041", // Scout logo orange
+        "lime-ink": "#101014", // links + accents inside the app: black, like the landing buttons
+        muted: "#6B6B6B",
+        line: "#E5E5E2",
         amber: "#F2A93B",
         "amber-bg": "#FCEFDA",
         green: "#5FA84E",
         "green-bg": "#E7F4E1",
-        "gray-bg": "#EFEEE7",
+        "gray-bg": "#EEEEEC",
         rust: "#C24A3A",
       },
       fontFamily: {
-        display: ["Roboto", "sans-serif"],
-        sans: ["Roboto", "sans-serif"],
+        display: ["Roboto", "Helvetica Neue", "Arial", "sans-serif"],
+        sans: ["Roboto", "Helvetica Neue", "Arial", "sans-serif"],
       },
       borderRadius: {
         xl2: "14px",

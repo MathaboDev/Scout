@@ -1,241 +1,217 @@
-import { Bookmark, ArrowLeft } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  Award,
+  Bookmark,
+  BookmarkCheck,
+  BookOpen,
+  Briefcase,
+  CalendarClock,
+  CheckCircle2,
+  MapPin,
+  Percent,
+  UserCheck,
+  XCircle,
+} from "lucide-react";
+import AppShell from "../components/AppShell.jsx";
+import { api } from "../lib/api.js";
+import { ELIGIBILITY_TYPES, closingLabel, formatDate, ordinalYear } from "../lib/constants.js";
+import { CompanyAvatar, FieldChip, TypeChip, UrgencyLabel } from "../components/ui.jsx";
 
+// Loaded by id from the API, so the page works on refresh, from a
+// bookmark, or from an email link (the old version relied on router state).
 export default function JobDetails() {
+  const { opportunityId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
+  const [opp, setOpp] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const job = location.state?.job;
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    api
+      .getOpportunity(opportunityId)
+      .then((data) => !cancelled && setOpp(data))
+      .catch((err) => !cancelled && setError(err.message))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [opportunityId]);
 
-  // If the page was opened directly without job data
-  if (!job) {
+  // While a save/unsave request is running the button is disabled, so a
+  // quick double-click can't send "remove" before "add" has finished.
+  const [bookmarkBusy, setBookmarkBusy] = useState(false);
+
+  async function toggleBookmark() {
+    if (bookmarkBusy) return;
+    const next = !opp.bookmarked;
+    setOpp({ ...opp, bookmarked: next });
+    setBookmarkBusy(true);
+    try {
+      if (next) await api.addBookmark(opp.opportunity_id);
+      else await api.removeBookmark(opp.opportunity_id);
+    } catch (err) {
+      setOpp((o) => ({ ...o, bookmarked: !next }));
+      setError(err.message);
+    } finally {
+      setBookmarkBusy(false);
+    }
+  }
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-cream px-6 py-10 text-ink md:px-12">
-        <button
-          type="button"
-          onClick={() => navigate("/eligible")}
-          className="flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink"
-        >
-          <ArrowLeft size={17} />
-          Back to opportunities
-        </button>
-
-        <div className="mt-10 rounded-2xl border border-line bg-white p-8 text-center">
-          <h1 className="text-xl font-bold">Opportunity not found</h1>
-
-          <p className="mt-2 text-sm text-muted">
-            This opportunity could not be loaded.
-          </p>
-
-          <button
-            type="button"
-            onClick={() => navigate("/eligible")}
-            className="mt-5 rounded-[10px] bg-ink px-5 py-2.5 text-sm font-bold text-white"
-          >
-            Back to opportunities
-          </button>
+      <AppShell title="Opportunity">
+        <div className="animate-pulse space-y-4">
+          <div className="h-32 rounded-xl bg-white" />
+          <div className="h-64 rounded-xl bg-white" />
         </div>
-      </div>
+      </AppShell>
     );
   }
 
-  const isExpired = new Date(job.closingDate) < new Date();
+  if (!opp) {
+    return (
+      <AppShell title="Opportunity not found">
+        <div className="mt-6 rounded-2xl border border-line bg-white p-8 text-center">
+          <p className="text-sm text-muted">{error || "This opportunity could not be loaded."}</p>
+          <Link
+            to="/eligible"
+            className="mt-5 inline-block rounded-md bg-ink px-5 py-2.5 text-[12px] font-medium uppercase tracking-[0.12em] text-white"
+          >
+            Back to opportunities
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
 
-  const formattedClosingDate = new Date(
-    job.closingDate
-  ).toLocaleDateString("en-ZA", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const blocked = opp.is_closed || !opp.eligible || opp.applied;
+  const buttonLabel = opp.applied
+    ? "Already applied"
+    : opp.is_closed
+    ? "Opportunity closed"
+    : !opp.eligible
+    ? "Not eligible"
+    : "Apply now";
 
-  const handleApply = () => {
-    if (isExpired || !job.eligible) return;
-
-    navigate("/apply", {
-      state: { job },
-    });
-  };
+  // [icon, label, value] for the requirements grid
+  const requirements = [
+    [BookOpen, "Field of study", opp.field_of_study],
+    [Briefcase, "Opportunity type", opp.opportunity_type],
+    [
+      UserCheck,
+      "Open to",
+      ELIGIBILITY_TYPES.find((e) => e.value === opp.eligibility_type)?.label || opp.eligibility_type,
+    ],
+    [Percent, "Minimum average", opp.minimum_average != null ? `${opp.minimum_average}%` : "No minimum"],
+    [CalendarClock, "Year of study", opp.year_level_required ? `${ordinalYear(opp.year_level_required)} or later` : "Any"],
+    [Award, "Qualification", opp.required_qualification || "Any"],
+    [MapPin, "Province", opp.province || "Nationwide"],
+  ];
 
   return (
-    <div className="min-h-screen bg-cream text-ink">
-      <main className="mx-auto w-full max-w-[1000px] px-6 py-10 md:px-12">
-        {/* Back button */}
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-ink"
-        >
-          <ArrowLeft size={17} />
-          Back to opportunities
-        </button>
+    <AppShell>
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink"
+      >
+        <ArrowLeft size={16} /> Back
+      </button>
 
-        {/* Header */}
-        <section className="mt-7 rounded-2xl border border-line bg-white p-6 shadow-sm md:p-8">
-          <div className="flex flex-col gap-5 md:flex-row md:items-start">
-            {/* Company letter */}
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gray-bg text-lg font-bold text-ink">
-              {job.letter}
-            </div>
+      {error && <div className="mb-4 rounded-[10px] bg-amber-bg px-4 py-3 text-sm text-[#966B1F]">{error}</div>}
 
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-bold capitalize md:text-3xl">
-                {job.title}
-              </h1>
-
-              <p className="mt-2 text-sm text-muted">
-                {job.company} · {job.location}
-              </p>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-full bg-lime/20 px-3 py-1 text-xs font-semibold text-lime-ink">
-                  {job.type}
-                </span>
-
-                <span className="rounded-full bg-gray-bg px-3 py-1 text-xs font-semibold text-muted">
-                  {job.fieldOfStudy}
-                </span>
-
-                {isExpired && (
-                  <span className="rounded-full bg-gray-bg px-3 py-1 text-xs font-semibold text-muted">
-                    Closed
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Bookmark */}
-            <button
-              type="button"
-              onClick={() => {
-                const saved =
-                  JSON.parse(localStorage.getItem("bookmarkedJobs")) || [];
-
-                const alreadyBookmarked = saved.some(
-                  (item) => item.id === job.id
-                );
-
-                const updated = alreadyBookmarked
-                  ? saved.filter((item) => item.id !== job.id)
-                  : [...saved, job];
-
-                localStorage.setItem(
-                  "bookmarkedJobs",
-                  JSON.stringify(updated)
-                );
-
-                // Refresh page state so bookmark icon updates
-                window.location.reload();
-              }}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-bg text-muted transition hover:text-ink"
-              aria-label="Bookmark opportunity"
-            >
-              <Bookmark size={18} />
-            </button>
-          </div>
-        </section>
-
-        {/* Closing date */}
-        <section className="mt-5 rounded-2xl border border-line bg-white p-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Closing date
-          </p>
-
-          <p className="mt-2 text-sm font-bold">
-            {formattedClosingDate}
-          </p>
-
-          {isExpired && (
-            <p className="mt-2 text-sm font-semibold text-muted">
-              This opportunity is closed and is no longer accepting
-              applications.
-            </p>
-          )}
-        </section>
-
-        {/* Description */}
-        <section className="mt-5 rounded-2xl border border-line bg-white p-6 md:p-8">
-          <h2 className="text-lg font-bold">About this opportunity</h2>
-
-          <p className="mt-3 text-sm leading-7 text-muted">
-            This opportunity is available through {job.company}. The role is
-            based in {job.location} and is suitable for students and graduates
-            studying in the {job.fieldOfStudy} field.
-          </p>
-
-          <p className="mt-4 text-sm leading-7 text-muted">
-            Review the opportunity requirements and application information
-            carefully before applying.
-          </p>
-        </section>
-
-        {/* Opportunity information */}
-        <section className="mt-5 rounded-2xl border border-line bg-white p-6 md:p-8">
-          <h2 className="text-lg font-bold">Opportunity information</h2>
-
-          <div className="mt-5 grid gap-5 sm:grid-cols-2">
-            <div>
-              <p className="text-xs font-semibold text-muted">
-                Company
-              </p>
-              <p className="mt-1 text-sm font-semibold">
-                {job.company}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-muted">
-                Location
-              </p>
-              <p className="mt-1 text-sm font-semibold">
-                {job.location}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-muted">
-                Opportunity type
-              </p>
-              <p className="mt-1 text-sm font-semibold">
-                {job.type}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-muted">
-                Field of study
-              </p>
-              <p className="mt-1 text-sm font-semibold">
-                {job.fieldOfStudy}
-              </p>
+      {/* header */}
+      <section className="rounded-2xl border border-line bg-white p-6 sm:p-7">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+          <CompanyAvatar name={opp.company_name} size="lg" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-muted">{opp.company_name}</p>
+            <h1 className="mt-1 text-[clamp(2rem,3.4vw,2.75rem)] font-medium leading-[1.08] tracking-[-0.02em]">{opp.title}</h1>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <TypeChip type={opp.opportunity_type} />
+              <FieldChip field={opp.field_of_study} />
+              <span className="inline-flex items-center gap-1 px-1 text-xs text-muted">
+                <MapPin size={12} /> {opp.province || "Nationwide"}
+              </span>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Actions */}
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="rounded-[10px] border border-line bg-white px-6 py-3 text-sm font-bold text-ink hover:bg-gray-bg"
-          >
-            Back
-          </button>
+      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-5">
+          <section className="rounded-2xl border border-line bg-white p-6 md:p-7">
+            <h2 className="text-xl font-medium tracking-tight">About this opportunity</h2>
+            <p className="mt-3 whitespace-pre-line text-[15px] leading-7 text-muted">{opp.description}</p>
+          </section>
 
-          <button
-            type="button"
-            disabled={isExpired || !job.eligible}
-            onClick={handleApply}
-            className={`rounded-[10px] px-6 py-3 text-sm font-bold ${
-              isExpired || !job.eligible
-                ? "cursor-not-allowed bg-gray-bg text-muted"
-                : "bg-ink text-white hover:opacity-90"
+          <section className="rounded-2xl border border-line bg-white p-6 md:p-7">
+            <h2 className="text-xl font-medium tracking-tight">Requirements</h2>
+            <dl className="mt-5 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+              {requirements.map(([Icon, label, value]) => (
+                <div key={label} className="flex items-start gap-3 py-1">
+                  <Icon size={17} className="mt-0.5 shrink-0 text-muted" />
+                  <div>
+                    <dt className="text-xs text-muted">{label}</dt>
+                    <dd className="mt-0.5 text-sm font-bold">{value}</dd>
+                  </div>
+                </div>
+              ))}
+            </dl>
+          </section>
+        </div>
+
+        {/* apply panel: sticks while scrolling on large screens */}
+        <aside className="h-fit space-y-4 rounded-2xl border border-line bg-white p-6 lg:sticky lg:top-8">
+          <div
+            className={`flex items-start gap-3 rounded-lg px-4 py-3 ${
+              opp.eligible ? "bg-green-bg text-[#3F7A33]" : "bg-gray-bg text-muted"
             }`}
           >
-            {isExpired ? "Opportunity closed" : "Apply now"}
+            {opp.eligible ? <CheckCircle2 size={20} className="shrink-0" /> : <XCircle size={20} className="shrink-0" />}
+            <p className="text-sm font-bold">
+              {opp.eligible ? "You're eligible for this" : "Your profile doesn't meet the requirements"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-muted">Closing date</p>
+            <p className="mt-1 text-sm font-bold">{formatDate(opp.closing_date, true)}</p>
+            <div className="mt-2">
+              <UrgencyLabel date={opp.closing_date} label={closingLabel(opp.closing_date)} />
+            </div>
+            {opp.is_closed && (
+              <p className="mt-2 text-sm font-semibold text-muted">This opportunity no longer accepts applications.</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            disabled={blocked}
+            onClick={() => navigate(`/apply/${opp.opportunity_id}`)}
+            className={`h-12 w-full rounded-md px-6 text-[12.5px] font-medium uppercase tracking-[0.14em] transition-colors ${
+              blocked ? "cursor-not-allowed bg-gray-bg text-muted" : "bg-ink text-white hover:bg-ink-soft"
+            }`}
+          >
+            {buttonLabel}
           </button>
-        </div>
-      </main>
-    </div>
+
+          <button
+            type="button"
+            onClick={toggleBookmark}
+            disabled={bookmarkBusy}
+            aria-pressed={opp.bookmarked}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-black/15 px-6 text-[12.5px] font-medium uppercase tracking-[0.14em] text-ink transition-colors hover:border-ink disabled:opacity-60"
+          >
+            {opp.bookmarked ? <BookmarkCheck size={17} fill="currentColor" /> : <Bookmark size={17} />}
+            {opp.bookmarked ? "Saved to watchlist" : "Save to watchlist"}
+          </button>
+        </aside>
+      </div>
+    </AppShell>
   );
 }

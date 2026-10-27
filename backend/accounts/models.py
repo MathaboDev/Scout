@@ -2,51 +2,28 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-# Create your models here.
+
 class Student(models.Model):
-    student_id = models.AutoField(
-        primary_key=True,
-        db_column="studentid"
-    )
-    first_name = models.CharField(
-        max_length=50,
-        db_column="firstname"
-    )
-    last_name = models.CharField(
-        max_length=50,
-        db_column="lastname"
-    )
-    email = models.EmailField(
-        max_length=100,
-        unique=True,
-        db_column="email"
-    )
+    student_id = models.BigAutoField(primary_key=True, db_column="studentid")
+    first_name = models.CharField(max_length=50, db_column="firstname")
+    last_name = models.CharField(max_length=50, db_column="lastname")
+    email = models.EmailField(max_length=100, unique=True, db_column="email")
     auth_user = models.OneToOneField(
-       settings.AUTH_USER_MODEL,
-       on_delete=models.CASCADE,
-       db_column="authuserid", 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        db_column="authuserid",
+        related_name="scout_student",
     )
+    # schema.sql: nullable. Django's auth_user.password is the real
+    # credential store, so we no longer write a second copy of the hash.
     password_hash = models.CharField(
-        max_length=255,
-        db_column="passwordhash"
+        max_length=255, null=True, blank=True, db_column="passwordhash"
     )
-    is_email_verified = models.BooleanField(
-        default=False,
-        db_column="isemailverified"
-    )
-    account_status = models.CharField(
-        max_length=20,
-        default="Active",
-        db_column="accountstatus"
-    )
-    created_at = models.DateTimeField(
-        default=timezone.now,
-        db_column="createdat"
-    )
-    updated_at = models.DateTimeField(
-       default=timezone.now,
-        db_column="updatedat"
-    )
+    is_email_verified = models.BooleanField(default=False, db_column="isemailverified")
+    # schema.sql default is lowercase 'active'
+    account_status = models.CharField(max_length=20, default="active", db_column="accountstatus")
+    created_at = models.DateTimeField(default=timezone.now, db_column="createdat")
+    updated_at = models.DateTimeField(default=timezone.now, db_column="updatedat")
 
     class Meta:
         managed = False
@@ -57,11 +34,7 @@ class Student(models.Model):
 
 
 class Profile(models.Model):
-    profile_id = models.AutoField(
-        primary_key=True,
-        db_column="profileid",
-    )
-
+    profile_id = models.BigAutoField(primary_key=True, db_column="profileid")
     student = models.OneToOneField(
         Student,
         on_delete=models.CASCADE,
@@ -69,64 +42,23 @@ class Profile(models.Model):
         related_name="profile",
     )
 
-    student_type = models.CharField(
-        max_length=30,
-        db_column="studenttype",
-    )
+    # Applies to all students
+    student_type = models.CharField(max_length=30, db_column="studenttype")
+    institution = models.CharField(max_length=100, db_column="institution")
+    field_of_study = models.CharField(max_length=100, db_column="fieldofstudy")
+    academic_average = models.FloatField(db_column="academicaverage")
+    opportunity_preference = models.CharField(max_length=50, db_column="opportunitypreference")
+    province = models.CharField(max_length=50, db_column="province")
 
-    institution = models.CharField(
-        max_length=100,
-        db_column="institution",
-    )
+    # Tertiary Student only
+    year_level = models.BigIntegerField(null=True, blank=True, db_column="yearlevel")
 
-    field_of_study = models.CharField(
-        max_length=100,
-        db_column="fieldofstudy",
-    )
+    # Graduate only
+    graduate_type = models.CharField(max_length=30, null=True, blank=True, db_column="graduatetype")
+    qualification = models.CharField(max_length=50, null=True, blank=True, db_column="qualification")
 
-    academic_average = models.FloatField(
-        db_column="academicaverage",
-    )
-
-    opportunity_preference = models.CharField(
-        max_length=50,
-        db_column="opportunitypreference",
-    )
-
-    province = models.CharField(
-        max_length=50,
-        db_column="province",
-    )
-
-    year_level = models.BigIntegerField(
-        null=True,
-        blank=True,
-        db_column="yearlevel",
-    )
-
-    graduate_type = models.CharField(
-        max_length=30,
-        null=True,
-        blank=True,
-        db_column="graduatetype",
-    )
-
-    qualification = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True,
-        db_column="qualification",
-    )
-
-    created_at = models.DateTimeField(
-        db_column="createdat",
-        auto_now_add=True,
-    )
-
-    updated_at = models.DateTimeField(
-        db_column="updatedat",
-        auto_now=True,
-    )
+    created_at = models.DateTimeField(auto_now_add=True, db_column="createdat")
+    updated_at = models.DateTimeField(auto_now=True, db_column="updatedat")
 
     class Meta:
         managed = False
@@ -134,3 +66,4 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"Profile {self.profile_id}"
+

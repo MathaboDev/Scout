@@ -1,11 +1,20 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
-import AuthNavbar from "../components/AuthNavbar.jsx";
+import AuthLayout from "../components/AuthLayout.jsx";
 import Button from "../components/Button.jsx";
 import FormField from "../components/FormField.jsx";
+import { HOME_FOR_ROLE } from "../components/RequireAuth.jsx";
 import { api } from "../lib/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
+
+// Only follow a "from" redirect if it belongs to the role that just logged in.
+function destinationFor(role, from) {
+  const providerPath = from?.startsWith("/provider");
+  if (from && role === "provider" && providerPath) return from;
+  if (from && role === "student" && !providerPath) return from;
+  return HOME_FOR_ROLE[role] || "/";
+}
 
 export default function Login() {
   const navigate = useNavigate();
@@ -24,8 +33,7 @@ export default function Login() {
     try {
       const data = await api.login({ email, password });
       signIn(data.token, data.user);
-      const redirectTo = location.state?.from || "/profile";
-      navigate(redirectTo);
+      navigate(destinationFor(data.user.role, location.state?.from), { replace: true });
     } catch (err) {
       setError(err.message || "Could not log you in. Check your details and try again.");
     } finally {
@@ -34,20 +42,18 @@ export default function Login() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-cream px-6 py-12">
-      <AuthNavbar current="login" />
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="w-full max-w-[420px] rounded-2xl border border-line bg-white p-11 shadow-sm"
-      >
-        <h2 className="text-center text-[22px] font-bold">Welcome back</h2>
-        <p className="mb-6 text-center text-[13px] text-muted">
-          Sign in to continue to your dashboard.
-        </p>
+    <AuthLayout
+      current="login"
+      headline="Good to see you again."
+      blurb="Pick up where you left off: new matches, saved listings and live application statuses."
+      tag="Log in"
+      title="Welcome back"
+      subtitle="Students and providers both sign in here."
+    >
+      <form onSubmit={handleSubmit} noValidate>
 
         {error && (
-          <div className="mb-5 flex items-start gap-2 rounded-[10px] bg-amber-bg px-3.5 py-3 text-xs text-[#966B1F]">
+          <div className="mb-5 flex items-start gap-2 rounded-md bg-amber-bg px-3.5 py-3 text-xs text-[#966B1F]">
             <AlertCircle size={15} className="mt-px shrink-0" />
             <span>{error}</span>
           </div>
@@ -62,8 +68,8 @@ export default function Login() {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <label className="mb-1.5 block text-xs font-semibold text-ink">Password</label>
-        <div className="mb-1.5 flex items-center gap-2.5 rounded-[10px] border-[1.5px] border-line bg-white px-3.5 py-3 text-sm focus-within:border-ink">
+        <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.14em] text-ink/60">Password</label>
+        <div className="mb-6 flex h-12 items-center gap-2.5 rounded-md border border-black/10 bg-white px-3.5 text-sm transition-colors focus-within:border-ink">
           <Lock size={16} className="shrink-0 text-muted" />
           <input
             type={showPassword ? "text" : "password"}
@@ -83,27 +89,21 @@ export default function Login() {
           </button>
         </div>
 
-        <div className="mb-5 text-right">
-          <button type="button" className="text-[13px] font-bold text-lime-ink hover:underline">
-            Forgot password?
-          </button>
-        </div>
-
         <Button type="submit" variant="dark" full disabled={submitting}>
           {submitting ? "Signing in..." : "Log in"}
         </Button>
 
-        <p className="mt-5 text-center text-[13px] text-muted">
+        <p className="mt-6 text-center text-[13px] text-muted">
           Don't have an account?{" "}
           <button
             type="button"
             onClick={() => navigate("/register")}
-            className="font-bold text-lime-ink hover:underline"
+            className="font-medium text-ink underline underline-offset-4 hover:no-underline"
           >
             Sign up
           </button>
         </p>
       </form>
-    </div>
+    </AuthLayout>
   );
 }

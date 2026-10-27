@@ -248,3 +248,50 @@ LOGGING = {
         },
     },
 }
+
+# ------------------------------------------------------------------
+# Paste these into scout_backend/settings.py (don't import this file).
+# ------------------------------------------------------------------
+
+
+
+# 2. Token auth for every API call (the frontend sends "Authorization: Token <key>").
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_THROTTLE_RATES": {"anon": "30/minute"},
+}
+
+# 3. Where email links point (missing-document links, receipts, reminders).
+
+
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+
+# 4. Email. For the demo, the console backend prints every email to the
+#    runserver terminal, so you can show the FR4 link without SMTP.
+#    For real email, set EMAIL_BACKEND to smtp and the EMAIL_* vars in .env.
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Scout <no-reply@scout.local>")
+
+# 5. CORS: let the Vite dev server call the API.
+#    Adds FRONTEND_URL to the list from the CORS_ALLOWED_ORIGINS env var
+#    (section above) instead of replacing it; dict.fromkeys drops duplicates.
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys([*CORS_ALLOWED_ORIGINS, FRONTEND_URL]))
+
+# 6. NFR5 interim audit log for provider status changes.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "loggers": {
+        "scout.audit": {"handlers": ["console"], "level": "INFO"},
+        "scout.notifications": {"handlers": ["console"], "level": "WARNING"},
+    },
+}
+

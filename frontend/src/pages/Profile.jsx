@@ -13,49 +13,23 @@ import FormField from "../components/FormField.jsx";
 import Button from "../components/Button.jsx";
 import { api } from "../lib/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import { Link } from "react-router-dom";
+import {
+  FIELD_OF_STUDY_OPTIONS,
+  GRADUATE_TYPE_OPTIONS,
+  OPPORTUNITY_TYPES as PREFERENCE_OPTIONS,
+  PROVINCE_OPTIONS,
+  QUALIFICATION_OPTIONS,
+  REQUIRED_DOCUMENTS,
+  STUDENT_TYPE_OPTIONS,
+  YEAR_OPTIONS,
+  ordinalYear,
+} from "../lib/constants.js";
 
 
 
-const FIELD_OF_STUDY_OPTIONS = [
-  "Information Technology",
-  "Computer Science",
-  "Engineering",
-  "Commerce & Accounting",
-  "Health Sciences",
-  "Law",
-  "Humanities & Social Sciences",
-  "Natural Sciences",
-  "Education",
-  "Other",
-];
-
-const PROVINCE_OPTIONS = [
-  "Eastern Cape",
-  "Free State",
-  "Gauteng",
-  "KwaZulu-Natal",
-  "Mpumalanga",
-  "Northern Cape",
-  "North West",
-  "Western Cape",
-  "Limpopo",
-];
-
-const YEAR_OPTIONS = [1, 2, 3, 4, 5, 6];
-const PREFERENCE_OPTIONS = ["Internship", "Learnership", "Graduate programme"];
-const STUDENT_TYPE_OPTIONS = ["Tertiary Student", "Graduate"];
-const GRADUATE_TYPE_OPTIONS = ["Undergraduate", "Postgraduate"];
-
-const QUALIFICATION_OPTIONS = {
-  Undergraduate: ["Higher Certificate", "Diploma", "Bachelor Degree"],
-  Postgraduate: ["Honours", "Masters", "Doctorate"],
-};
-
-const REQUIRED_DOCUMENTS = [
-  { key: "cv", label: "CV" },
-  { key: "matric_certificate", label: "Matric certificate" },
-];
-
+// All option lists come from lib/constants.js so they match the backend
+// (and the schema's CHECK constraints) exactly.
 const EMPTY_PROFILE = {
   studenttype: "",
   institution: "",
@@ -161,7 +135,9 @@ export default function Profile() {
         ]);
         if (cancelled) return;
         setProfile(normalizeProfile(profileData));
-        setDocuments(normalizeDocuments({ documents: documentsData }));
+        setDocuments(normalizeDocuments({ documents: documentsData?.results ?? documentsData }));
+        // No profile saved yet: open the form straight away.
+        if (!profileData?.profile_id) setEditing(true);
       } catch {
         if (!cancelled) setEditing(true);
       } finally {
@@ -219,7 +195,8 @@ export default function Profile() {
     setNotice(null);
 
     try {
-      await api.updateProfile(profile);
+      const saved = await api.updateProfile(profile);
+      setProfile(normalizeProfile(saved));
       setEditing(false);
       setNotice({ type: "ok", text: "Profile saved." });
     } catch (err) {
@@ -293,7 +270,7 @@ export default function Profile() {
     >
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-xl2 border border-line bg-white px-6 py-5">
         <div className="flex items-center gap-3.5">
-          <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-lime text-lg font-bold text-ink">
+          <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-ink text-lg font-medium text-white">
             {initials || "SC"}
           </span>
           <div>
@@ -309,12 +286,21 @@ export default function Profile() {
           <p className="mb-1.5 text-right text-xs font-bold">Profile completion: {completion}%</p>
           <div className="h-1.5 overflow-hidden rounded-full bg-gray-bg">
             <div
-              className="h-full rounded-full bg-lime transition-all duration-500"
+              className="h-full rounded-full bg-ink transition-all duration-500"
               style={{ width: `${completion}%` }}
             />
           </div>
         </div>
       </div>
+
+      {notice?.type === "ok" && completion === 100 && (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl2 border border-line bg-white px-5 py-3 text-sm">
+          <span className="font-semibold">Your profile is complete.</span>
+          <Link to="/eligible" className="font-bold text-lime-ink hover:underline">
+            See opportunities you qualify for
+          </Link>
+        </div>
+      )}
 
       {notice && (
         <div
@@ -331,7 +317,7 @@ export default function Profile() {
       <div className="mb-5 rounded-xl2 border border-line bg-white p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-[15px] font-bold">Contact details</h3>
+            <h3 className="text-lg font-medium tracking-tight">Contact details</h3>
             <p className="mt-1 text-xs text-muted">Your account details are managed through registration.</p>
           </div>
         </div>
@@ -344,7 +330,7 @@ export default function Profile() {
       <form onSubmit={handleSave} className="mb-5 rounded-xl2 border border-line bg-white p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-[15px] font-bold">Professional profile</h3>
+            <h3 className="text-lg font-medium tracking-tight">Professional profile</h3>
             <p className="mt-1 text-xs text-muted">These details are used to determine eligible opportunities.</p>
           </div>
           {!editing && (
@@ -397,11 +383,12 @@ export default function Profile() {
 
               <FormField
                 as="select"
-                label="Province (optional)"
+                label="Province"
                 value={profile.province}
                 onChange={(e) => update("province", e.target.value)}
+                required
               >
-                <option value="">Select a province</option>
+                <option value="" disabled>Select a province</option>
                 {PROVINCE_OPTIONS.map((province) => (
                   <option key={province} value={province}>{province}</option>
                 ))}
@@ -417,7 +404,7 @@ export default function Profile() {
                 >
                   <option value="" disabled>Select your year</option>
                   {YEAR_OPTIONS.map((year) => (
-                    <option key={year} value={year}>{year}{year === 1 ? "st" : year === 2 ? "nd" : year === 3 ? "rd" : "th"} year</option>
+                    <option key={year} value={year}>{ordinalYear(year)}</option>
                   ))}
                 </FormField>
               )}
@@ -494,7 +481,7 @@ export default function Profile() {
               ["Institution", profile.institution],
               ["Field of study", profile.fieldofstudy],
               ["Province", profile.province],
-              ["Year of study", profile.studenttype === "Tertiary Student" && profile.yearlevel ? `${profile.yearlevel}${Number(profile.yearlevel) === 1 ? "st" : Number(profile.yearlevel) === 2 ? "nd" : Number(profile.yearlevel) === 3 ? "rd" : "th"} year` : ""],
+              ["Year of study", profile.studenttype === "Tertiary Student" ? ordinalYear(profile.yearlevel) : ""],
               ["Graduate type", profile.studenttype === "Graduate" ? profile.graduatetype : ""],
               ["Qualification", profile.studenttype === "Graduate" ? profile.qualification : ""],
               ["Academic average", profile.academicaverage ? `${profile.academicaverage}%` : ""],
@@ -510,7 +497,7 @@ export default function Profile() {
       </form>
 
       <div className="rounded-xl2 border border-line bg-white p-6">
-        <h3 className="mb-1 text-[15px] font-bold">Documents</h3>
+        <h3 className="mb-1 text-lg font-medium tracking-tight">Documents</h3>
         <p className="mb-4 text-xs leading-relaxed text-muted">
           Your CV and matric certificate are required. You can also add optional supporting documents such as a transcript, university certificate or proof of registration.
         </p>
@@ -606,7 +593,7 @@ function DocStatus({ state }) {
   }
   if (state === "uploading") return <span className="text-xs font-semibold text-muted">Uploading...</span>;
   if (state === "failed") {
-    return <span className="flex items-center gap-1 text-xs font-semibold text-rust"><XCircle size={14} /> Upload failed</span>;
+    return <span className="flex items-center gap-1 text-xs font-semibold text-[#C24A3A]"><XCircle size={14} /> Upload failed</span>;
   }
   return <span className="flex items-center gap-1 text-xs font-semibold text-amber"><AlertTriangle size={14} /> Not uploaded</span>;
 }

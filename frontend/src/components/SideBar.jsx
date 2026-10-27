@@ -1,125 +1,82 @@
-import { useNavigate, useLocation } from "react-router-dom";
-import {
-  User,
-  Briefcase,
-  Bookmark,
-  Settings,
-  LogOut,
-} from "lucide-react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { User, Briefcase, Bookmark, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { Mark } from "./Logo.jsx";
 
-export default function Sidebar({ user }) {
+// Student navigation, in this order: Profile, Scouted jobs, Watchlist.
+// Styled like the landing page nav: uppercase, widely spaced letters,
+// and the current page shown as a white tab.
+const NAV_ITEMS = [
+  { label: "Profile", path: "/profile", icon: User },
+  { label: "Scouted jobs", path: "/eligible", icon: Briefcase },
+  { label: "Watchlist", path: "/watchlist", icon: Bookmark },
+];
+
+// `onNavigate` lets the mobile drawer close itself after a link is clicked.
+export default function Sidebar({ user, onNavigate }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut } = useAuth();
 
   const fullName = user?.fullName || "Your Name";
-
-  const initials =
-    fullName !== "Your Name"
-      ? fullName
-          .split(" ")
-          .filter(Boolean)
-          .map((name) => name[0])
-          .slice(0, 2)
-          .join("")
-          .toUpperCase()
-      : "YN";
-
-  const navItems = [
-    { key: "profile", label: "Scouter", path: "/profile", icon: User },
-    {
-      key: "eligible",
-      label: "Scouted jobs",
-      path: "/eligible",
-      icon: Briefcase,
-    },
-    {
-      key: "watchlist",
-      label: "Watchlist",
-      path: "/watchlist",
-      icon: Bookmark,
-    },
-    {
-      key: "settings",
-      label: "Settings",
-      path: "/dashboard",
-      icon: Settings,
-    },
-  ];
+  const initials = fullName
+    .split(" ")
+    .filter(Boolean)
+    .map((name) => name[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   function handleSignOut() {
     signOut();
     navigate("/login");
   }
 
-  return (
-    <aside className="flex min-h-screen w-[225px] shrink-0 flex-col justify-between bg-ink px-4 py-6 text-white">
-      <div>
-        {/* Scout logo */}
-        <div className="mb-8 flex items-center gap-3 px-2">
-          <div className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-lime text-lg font-bold text-ink">
-            <Mark size={38} />
-          </div>
+  // a job page or apply page counts as being inside "Scouted jobs"
+  function isActive(path, matched) {
+    return matched || (path === "/eligible" && /^\/(jobs|apply)\//.test(location.pathname));
+  }
 
-          <span className="text-xl font-bold">Scout</span>
+  return (
+    <aside className="flex h-full w-[240px] flex-col justify-between bg-[#0A0A0A] px-4 py-6 text-white">
+      <div>
+        <div className="mb-10 flex items-center gap-2.5 px-2">
+          <Mark size={32} />
+          <span className="text-[19px] font-medium tracking-tight">Scout</span>
         </div>
 
-        {/* Navigation links */}
         <nav className="flex flex-col gap-1">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            const Icon = item.icon;
-
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => navigate(item.path)}
-                aria-current={isActive ? "page" : undefined}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition ${
-                  isActive
-                    ? "bg-lime text-ink"
-                    : "text-white hover:bg-white/10"
-                }`}
-              >
-                <Icon size={18} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
+          {NAV_ITEMS.map(({ label, path, icon: Icon }) => (
+            <NavLink
+              key={path}
+              to={path}
+              onClick={onNavigate}
+              className={({ isActive: matched }) =>
+                `flex items-center gap-3 rounded-md px-3 py-2.5 text-[12px] font-medium uppercase tracking-[0.14em] transition-colors ${
+                  isActive(path, matched) ? "bg-white text-ink" : "text-white/60 hover:bg-white/5 hover:text-white"
+                }`
+              }
+            >
+              <Icon size={16} />
+              <span>{label}</span>
+            </NavLink>
+          ))}
         </nav>
       </div>
 
-      {/* Student information and logout */}
       <div className="border-t border-white/10 px-2 pt-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold">
-            {initials}
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white/10 text-xs font-medium">
+            {initials || "?"}
           </div>
-
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">
-              {fullName}
-            </p>
-
-            <button
-              type="button"
-              onClick={() => navigate("/profile")}
-              className="text-xs text-white/60 hover:text-white hover:underline"
-            >
-              View profile
-            </button>
-          </div>
+          <p className="min-w-0 truncate text-sm font-medium">{fullName}</p>
         </div>
-
         <button
           type="button"
           onClick={handleSignOut}
-          className="mt-5 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-white/70 transition hover:bg-white/10 hover:text-white"
+          className="mt-4 flex w-full items-center gap-2 py-2 text-[12px] font-medium uppercase tracking-[0.14em] text-white/50 transition-colors hover:text-white"
         >
-          <LogOut size={16} />
+          <LogOut size={15} />
           <span>Log out</span>
         </button>
       </div>
