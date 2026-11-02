@@ -1,5 +1,7 @@
 from django.contrib.auth import authenticate, get_user_model
 from django.db import transaction
+from django.utils import timezone
+from django.contrib.auth.hashers import check_password
 
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -11,8 +13,15 @@ from rest_framework.throttling import AnonRateThrottle
 
 from core.permissions import IsStudent, get_provider, get_student
 
-from .models import Profile, Student
+from .models import Profile, Student, LoginOTP
 from .serializers import StudentProfileSerializer
+
+from .otp_utils import (can_request_login_otp, create_login_otp, send_login_otp, verify_login_otp, MAX_OTP_ATTEMPTS, MAX_OTP_RESENDS,)
+from .throttles import OTPVerificationThrottle, OTPResendThrottle
+
+import logging
+# Logger for recording backend errors without exposing them to users.
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -20,9 +29,9 @@ MIN_PASSWORD_LENGTH = 10  # frontend Register.jsx uses the same number
 
 
 def _user_payload(user):
-    """
+    """"
     The one shape the frontend stores after login. `role` decides which
-    side of the app the user lands on: "student" or "provider".
+    side of the app the user lands on: 'student' or 'provider'.
     """
     student = get_student(user)
     provider = None if student else get_provider(user)
@@ -116,32 +125,281 @@ def register(request):
 @permission_classes([AllowAny])
 @throttle_classes([AnonRateThrottle])
 def login(request):
+    """
+    Authenticate the user's credentials and initiate email OTP verification.
+    An authentication token is issued only after OTP verification.
+    """
+
     email = (request.data.get("email") or "").strip().lower()
     password = request.data.get("password") or ""
 
+    # Ensure both login credentials have been provided.
     if not email or not password:
         return Response(
-            {"error": "Enter your email and password."},
-            status=status.HTTP_400_BAD_REQUEST,
+            {"error": "Email and password are required."},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    user = authenticate(request=request, username=email, password=password)
+    # Authenticate against Django's existing user credentials.
+    user = authenticate(
+        request=request,
+        username=email,
+        password=password
+    )
+
     if user is None:
         return Response(
             {"error": "Invalid email or password."},
-            status=status.HTTP_401_UNAUTHORIZED,
+            status=status.HTTP_401_UNAUTHORIZED
         )
 
+    # Only registered Scout students and providers may continue.
     payload = _user_payload(user)
+
     if payload["role"] is None:
         return Response(
-            {"error": "This login isn't linked to a Scout student or provider account."},
-            status=status.HTTP_403_FORBIDDEN,
+            {"error": "User account is not linked to a Scout role."},
+            status=status.HTTP_403_FORBIDDEN
         )
 
-    token, _ = Token.objects.get_or_create(user=user)
-    return Response({"token": token.key, "user": payload}, status=status.HTTP_200_OK)
+    # Lock the user's database row so simultaneous login requests
+    # cannot generate multiple OTP challenges during the cooldown.
+    with transaction.atomic():
+        User.objects.select_for_update().get(pk=user.pk)
 
+        if not can_request_login_otp(user):
+            return Response(
+                {
+                    "error": (
+                        "Please wait 60 seconds before requesting "
+                        "another verification code."
+                    )
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
+        # Generate the OTP and its separate secure resend credential.
+        otp_record, otp_code, resend_token = create_login_otp(user)
+
+    try:
+        send_login_otp(user, otp_code)
+    except Exception:
+        # Record the actual email delivery error for backend debugging.
+        logger.exception("Failed to send login OTP email.")
+
+        # Invalidate the OTP challenge when sending fails.
+        otp_record.is_used = True
+        otp_record.save(update_fields=["is_used"])
+
+        return Response(
+            {"error": "Unable to send verification code. Please try again."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+    )
+
+    # Return the challenge ID, not the authentication token.
+    return Response(
+        {
+            "message": "Verification code sent to your email.",
+            "otp_id": otp_record.id,
+
+            # The frontend must keep this credential private.
+            # It will be required when requesting another OTP.
+            "resend_token": resend_token,
+
+            "requires_otp": True
+        },
+        status=status.HTTP_200_OK
+    )
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@throttle_classes([OTPVerificationThrottle])
+def verify_otp(request):
+    """
+    Verify the login OTP and issue an authentication token
+    only when the OTP challenge is successfully completed.
+    """
+
+    otp_id = request.data.get("otp_id")
+    otp_code = str(request.data.get("otp_code") or "").strip()
+
+    # Validate the submitted challenge ID and six-digit OTP.
+    if not str(otp_id).isdigit() or not (
+        len(otp_code) == 6 and otp_code.isascii() and otp_code.isdigit()
+    ):
+        return Response(
+            {"error": "A valid OTP ID and six-digit code are required."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Lock the OTP record during verification to prevent
+    # simultaneous requests from successfully reusing the same code.
+    with transaction.atomic():
+        otp_record = (
+            LoginOTP.objects
+            .select_for_update()
+            .select_related("user")
+            .filter(id=otp_id)
+            .first()
+        )
+
+        if otp_record is None:
+            return Response(
+                {"error": "Invalid or expired verification code."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # The helper checks the code, expiry, attempt limit and reuse.
+        if not verify_login_otp(otp_record, otp_code):
+            return Response(
+                {"error": "Invalid or expired verification code."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = otp_record.user
+        payload = _user_payload(user)
+
+        # Confirm the account is still active and has a valid Scout role.
+        if not user.is_active or payload["role"] is None:
+            return Response(
+                {"error": "This account cannot log in."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Only issue the authentication token after OTP verification.
+        token, _ = Token.objects.get_or_create(user=user)
+
+    return Response(
+        {
+            "message": "Login successful.",
+            "token": token.key,
+            "user": payload
+        },
+        status=status.HTTP_200_OK
+    )
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@throttle_classes([OTPResendThrottle])
+def resend_otp(request):
+    """
+    Resend a login OTP only when the requester provides
+    the correct secret credential for the challenge.
+    """
+
+    otp_id = request.data.get("otp_id")
+    resend_token = request.data.get("resend_token")
+
+    # Validate both required inputs.
+    if (
+        not str(otp_id).isdigit()
+        or not isinstance(resend_token, str)
+        or not resend_token
+    ):
+        return Response(
+            {"error": "Invalid verification request."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    with transaction.atomic():
+
+        # Find the original challenge.
+        original = LoginOTP.objects.filter(id=otp_id).first()
+
+        if original is None:
+            return Response(
+                {"error": "Invalid verification request."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Lock the user row to serialize concurrent OTP requests.
+        user = User.objects.select_for_update().get(
+            pk=original.user_id
+        )
+
+        # Reload the challenge after obtaining the lock so concurrent
+        # requests cannot act on stale challenge information.
+        original.refresh_from_db()
+
+        # Reject challenges that are already used, exhausted,
+        # or belong to inactive accounts.
+        if (
+            original.is_used
+            or original.attempts >= MAX_OTP_ATTEMPTS
+            or not user.is_active
+            or _user_payload(user)["role"] is None
+        ):
+            return Response(
+                {"error": "Invalid verification request."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Compare the supplied secret with the stored hash.
+        # Old challenges without a resend token are rejected.
+        if (
+            not original.resend_token_hash
+            or not check_password(
+                resend_token,
+                original.resend_token_hash
+            )
+        ):
+            return Response(
+                {"error": "Invalid verification request."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Stop issuing replacement codes after three resends.
+        if original.resend_count >= MAX_OTP_RESENDS:
+            return Response(
+                {"error": "Resend limit reached. Please log in again."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
+        # Enforce the existing 60-second cooldown.
+        if not can_request_login_otp(user):
+            return Response(
+                {
+                    "error": (
+                        "Please wait 60 seconds before requesting "
+                        "another verification code."
+                    )
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
+        # Carry the resend count into the replacement challenge.
+        otp_record, otp_code, new_resend_token = create_login_otp(
+        user, resend_count=original.resend_count + 1
+        )
+
+    try:
+        send_login_otp(user, otp_code)
+
+    except Exception:
+        logger.exception("Failed to resend login OTP email.")
+
+        otp_record.is_used = True
+        otp_record.save(update_fields=["is_used"])
+
+        return Response(
+            {"error": "Unable to send verification code."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+
+    return Response(
+        {
+            "message": "A new verification code has been sent.",
+            "otp_id": otp_record.id,
+
+            # Rotate the resend credential with each replacement OTP.
+            "resend_token": new_resend_token,
+
+            "requires_otp": True,
+
+            "resends_remaining": MAX_OTP_RESENDS - otp_record.resend_count,
+        },
+        status=status.HTTP_200_OK
+    )
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
