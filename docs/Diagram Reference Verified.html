@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scout: Verified Diagram Reference</title>
+<style>
+  :root{
+    --ink:#12151c; --ink-2:#4b5262; --muted:#7a8191; --bg:#f7f8fa; --card:#fff; --line:#e3e6eb;
+    --stu:#fef8ec; --stu-l:#d97706; --stu-t:#8a4c0a;
+    --sys:#eefaf6; --sys-l:#0d9488; --sys-t:#0f5f52;
+    --prov:#f3f1fd; --prov-l:#6f61e0; --prov-t:#3f3597;
+    --adm:#eef4fd; --adm-l:#2563eb; --adm-t:#1e3a6f;
+    --dec:#fff5e1; --dec-l:#c77a12;
+    --plan:#f1f1f1; --plan-l:#999; --plan-t:#777;
+    --del:#b42318; --del-bg:#fdeeec; --chg:#9a5b00; --chg-bg:#fff5e1; --add:#0f7a55; --add-bg:#e9f7f0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,"Segoe UI",system-ui,sans-serif;line-height:1.5}
+  .page{max-width:1280px;margin:0 auto;padding:44px 32px 90px}
+  .eyebrow{font:600 12px/1 Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;color:#6f61e0;margin-bottom:10px}
+  h1{font-size:32px;margin:0 0 8px;letter-spacing:-.02em}
+  h2{font-size:24px;margin:0 0 4px}
+  h3{font-size:15px;margin:24px 0 10px}
+  .lede{color:var(--ink-2);max-width:880px;margin:0 0 16px}
+  .intro{color:var(--ink-2);max-width:880px;font-size:15px}
+  code{font:12.5px Consolas,monospace;background:#eef0f4;padding:1px 5px;border-radius:4px;color:#3f3597}
+  nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 28px}
+  nav.toc a{font-size:13px;font-weight:600;color:var(--ink);text-decoration:none;background:#fff;border:1px solid var(--line);padding:7px 12px;border-radius:999px}
+  nav.toc a:hover{border-color:#6f61e0;color:#6f61e0}
+  section{margin-top:52px;scroll-margin-top:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:0 1px 3px rgba(16,24,40,.06)}
+  .fix-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;margin:16px 0 20px}
+  .fix-grid .card ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink-2)}
+  .fix-grid li{margin:4px 0}
+  .tag{display:inline-block;font:600 11px/1 Consolas,monospace;letter-spacing:.06em;text-transform:uppercase;padding:4px 8px;border-radius:6px;margin-bottom:9px}
+  .t-del{background:var(--del-bg);color:var(--del)} .t-chg{background:var(--chg-bg);color:var(--chg)} .t-add{background:var(--add-bg);color:var(--add)}
+  .board{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;overflow-x:auto}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink-2);margin:0 0 12px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px;border:1px solid}
+  .verify{margin-top:14px;border-left:3px solid var(--chg);background:var(--chg-bg);border-radius:0 10px 10px 0;padding:12px 16px;font-size:13.5px;color:#5c3a00}
+  .verify strong{display:block;margin-bottom:4px}
+  .verify ul{margin:0;padding-left:18px}
+  .verify li{margin:3px 0}
+  .src{font-size:12.5px;color:var(--muted);margin-top:8px}
+  /* swimlanes */
+  .lanes{display:grid;grid-template-columns:repeat(4,minmax(200px,1fr));gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .lane{padding:12px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+  .lane:last-child{border-right:none}
+  .lane-h{font:600 12px Consolas,monospace;text-transform:uppercase;letter-spacing:.06em;padding-bottom:6px;border-bottom:2px solid}
+  .lane.stu{background:var(--stu)} .lane.stu .lane-h{color:var(--stu-t);border-color:var(--stu-l)}
+  .lane.sys{background:var(--sys)} .lane.sys .lane-h{color:var(--sys-t);border-color:var(--sys-l)}
+  .lane.prov{background:var(--prov)} .lane.prov .lane-h{color:var(--prov-t);border-color:var(--prov-l)}
+  .lane.adm{background:var(--adm)} .lane.adm .lane-h{color:var(--adm-t);border-color:var(--adm-l)}
+  .node{background:#fff;border:1px solid #cfd4dc;border-radius:8px;padding:8px 10px;font-size:13px;position:relative}
+  .node small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+  .node.dec{background:var(--dec);border:1px solid var(--dec-l);font-weight:600}
+  .node.plan{background:var(--plan);border:1px dashed var(--plan-l);color:var(--plan-t)}
+  .node.term{background:var(--ink);color:#fff;border-color:var(--ink);text-align:center;font-weight:600;font-size:12.5px}
+  .down{text-align:center;color:var(--muted);font-size:14px;margin:-4px 0}
+  /* sequence */
+  table{width:100%;border-collapse:collapse;font-size:13px;background:#fff}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:#f3f4f7;font:600 11.5px Consolas,monospace;text-transform:uppercase;letter-spacing:.04em}
+  td.n{width:38px;color:var(--muted);font-family:Consolas,monospace}
+  td.alt{background:#fffbf2}
+  .actor-s{color:var(--stu-t);font-weight:700} .actor-f{color:var(--adm-t);font-weight:700} .actor-a{color:var(--prov-t);font-weight:700} .actor-d{color:var(--sys-t);font-weight:700} .actor-m{color:#555;font-weight:700}
+  /* use case */
+  .uc-grid{display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:16px;align-items:start}
+  .actor{text-align:center;font-weight:700;padding:10px;border-radius:10px;border:2px solid}
+  .actor.stu{border-color:var(--stu-l);background:var(--stu);color:var(--stu-t)}
+  .actor.prov{border-color:var(--prov-l);background:var(--prov);color:var(--prov-t)}
+  .actor.adm{border-color:var(--adm-l);background:var(--adm);color:var(--adm-t)}
+  .actor.ext{border-color:#999;background:#f5f5f5;color:#555}
+  .system{border:2px solid #9aa3b2;border-radius:14px;padding:14px;background:#fbfcfd}
+  .system>h4{margin:0 0 10px;font-size:14px;text-align:center;color:var(--ink-2)}
+  .uc{display:block;border:1px solid #9bb8ee;background:var(--adm);border-radius:999px;padding:7px 12px;font-size:13px;margin:0 0 7px;text-align:center}
+  .uc.plan{border:1px dashed var(--plan-l);background:var(--plan);color:var(--plan-t)}
+  .uc.inc{background:#fff;border-style:dashed}
+  .uc-col h5{margin:0 0 8px;font:600 11.5px Consolas,monospace;text-transform:uppercase;color:var(--ink-2);text-align:center}
+  .rel{font-size:12.5px;color:var(--ink-2);margin:10px 0 0}
+  .rel b{color:var(--ink)}
+  .connect{display:flex;flex-direction:column;gap:6px;margin:8px 0;font-size:12.5px;color:var(--ink-2)}
+  /* class + erd cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+  .ent{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;font-size:12.8px}
+  .ent h4{margin:0;padding:8px 11px;background:var(--ink);color:#fff;font-size:13px}
+  .ent.ext h4{background:#777}
+  .ent.plan h4{background:#aaa}
+  .ent ul{list-style:none;margin:0;padding:7px 11px}
+  .ent li{padding:2px 0;font:12px Consolas,monospace;color:#222}
+  .ent li.note{font:12px Inter,sans-serif;color:var(--muted);font-style:italic}
+  .pk{font-weight:700;color:#000} .fk{color:#2563eb}
+  .rels{font-size:13px;margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .rels div{padding:3px 0;border-bottom:1px dashed #e5e7eb}
+  .rels div:last-child{border:none}
+  /* architecture */
+  .layer{border-radius:12px;padding:14px 16px}
+  .layer h4{margin:0 0 9px;font:600 12px Consolas,monospace;text-transform:uppercase;letter-spacing:.05em}
+  .boxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+  .bx{background:#fff;border:1px solid #cfd4dc;border-radius:8px;padding:8px 10px;font-size:13px}
+  .bx.plan{background:var(--plan);border:1px dashed var(--plan-l);color:var(--plan-t)}
+  .bx small{display:block;color:var(--muted);font-size:11.5px}
+  .conn{text-align:center;color:var(--muted);font:12.5px Consolas,monospace;margin:6px 0}
+  @media (max-width:1000px){.lanes{grid-template-columns:1fr 1fr}.uc-grid{grid-template-columns:1fr}}
+  @media (max-width:640px){.lanes{grid-template-columns:1fr}}
+  footer{margin-top:60px;font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="eyebrow">Scout documentation · diagram revision · verified against code</p>
+  <h1>Revised diagram reference</h1>
+  <p class="intro">Target versions of the five system diagrams, plus the architecture figure. Every element here was checked against the code, with the file named where it comes from. Items marked <b>planned</b> are designed but not built. Copy the layouts into drawio or the report; the structure is the reference.</p>
+
+  <nav class="toc">
+    <a href="#corrections">0 · Corrections to the earlier draft</a>
+    <a href="#usecase">1 · Use case</a>
+    <a href="#activity">2 · Activity</a>
+    <a href="#sequence">3 · Sequence</a>
+    <a href="#class">4 · Class</a>
+    <a href="#erd">5 · ERD</a>
+    <a href="#architecture">6 · Architecture</a>
+  </nav>
+
+  <!-- ============================================================ CORRECTIONS -->
+  <section id="corrections">
+    <h2>0 · Corrections to the earlier draft</h2>
+    <p class="lede">The earlier draft marked several built features as removed or planned. Check your diagrams against this list before you start.</p>
+    <div class="card">
+      <ul style="margin:0;padding-left:18px;font-size:14px;color:var(--ink-2)">
+        <li><b>Built, so keep:</b> missing-document alert (in-app and email, once only, with a resume link), submission receipt email, outcome and status-change notifications, bookmarks (save, list, remove), application summary PDF, and the deadline reminder command.</li>
+        <li><b>Partly built:</b> deadline reminders are a management command (<code>send_bookmark_reminders</code>). They run only when a scheduled job calls them. Draw it as a system job, not as a live feature.</li>
+        <li><b>Outcome wording:</b> the outcome is <i>Successful</i> or <i>Unsuccessful</i>. Do not use Accepted or Rejected.</li>
+        <li><b>Eligibility type:</b> <code>eligibilitytype</code> is never NULL. The value <code>Any</code> means open to both student types.</li>
+        <li><b>Adminid:</b> <code>opportunity.adminid</code> is NOT NULL. On creation it is set to the first active admin. Verification overwrites it with the reviewing admin. It is not "null until verified".</li>
+        <li><b>Login_otp columns:</b> the real names are <code>user_id</code>, <code>code_hash</code>, <code>resend_token_hash</code>, <code>resend_count</code>, <code>created_at</code>, <code>expires_at</code>, <code>attempts</code>, <code>is_used</code>. Not <code>authuserid</code> or <code>codehash</code>.</li>
+        <li><b>Not built, so remove:</b> password reset, user management, listing or account suspension, platform monitoring.</li>
+      </ul>
+    </div>
+    <div class="verify" style="margin-top:14px"><strong>Also correct the earlier brief</strong>
+      The Diagram Revision Brief and Revised Diagram Reference (Markdown) say missing-document alerts, the summary download and auto-apply are planned. That is wrong for the first two. Update those files to match this page.
+    </div>
+  </section>
+
+  <!-- ============================================================ USE CASE -->
+  <section id="usecase">
+    <h2>1 · Use case diagram</h2>
+    <p class="lede">Three human actors and the email service. Use cases are the things a user can actually do in the built system.</p>
+
+    <div class="fix-grid">
+      <div class="card"><span class="tag t-del">Remove</span><ul>
+        <li><b>Reset Password</b>: not built (planned)</li>
+        <li><b>Manage Users</b>, <b>Monitor Platform</b>: not built (planned)</li>
+        <li>Admin <b>Manage Opportunity Listings</b>: the admin only verifies. Providers manage their own listings.</li>
+        <li>Duplicate <b>Receive Notifications</b> oval (keep one)</li>
+      </ul></div>
+      <div class="card"><span class="tag t-chg">Fix</span><ul>
+        <li><b>Verify Email</b> becomes <b>Verify email with 6-digit code</b> (<code>accounts/views.py</code> <code>verify_otp</code>). It is an include of Register.</li>
+        <li><b>Review Application</b> is an include of Apply, not an extend. Review is mandatory before submit (<code>applications/views.py</code> <code>review_application</code>).</li>
+        <li><b>View Matched Opportunitis</b> → <b>View eligible or all opportunities</b> (typo and wording)</li>
+        <li><b>Download Application Summary</b> stays; add <b>View receipt</b> under Track.</li>
+        <li>Spelling: Recieve → Receive. Remove the stray "Container" label.</li>
+      </ul></div>
+      <div class="card"><span class="tag t-add">Add</span><ul>
+        <li>Provider: <b>Register as provider</b>, <b>Log in</b>, <b>Create listing</b>, <b>Edit or remove listing</b>, <b>View applicants</b>, <b>Update application status</b></li>
+        <li>Admin: <b>Log in</b>, <b>Review pending listings</b>, <b>Verify listing</b></li>
+        <li>Student: <b>Bookmark</b> and <b>Remove bookmark</b>, <b>Resend code</b> (extends Verify)</li>
+        <li>Email service: <b>send code</b>, <b>send receipt</b>, <b>send missing-document alert</b>, <b>send status update</b>, <b>send deadline reminder</b></li>
+      </ul></div>
+    </div>
+
+    <h3>Diagram</h3>
+    <div class="board">
+      <div class="uc-grid">
+        <div>
+          <div class="actor stu">Student</div>
+          <div style="height:12px"></div>
+          <div class="uc-col"><h5>Account</h5>
+            <div class="uc">Register</div>
+            <div class="uc">Log in</div>
+          </div>
+          <div class="uc-col"><h5>Profile and documents</h5>
+            <div class="uc">Manage profile</div>
+            <div class="uc">Upload CV and matric</div>
+          </div>
+          <div class="uc-col"><h5>Opportunities</h5>
+            <div class="uc">View eligible or all</div>
+            <div class="uc">Bookmark or remove bookmark</div>
+          </div>
+          <div class="uc-col"><h5>Applying</h5>
+            <div class="uc">Apply</div>
+            <div class="uc">Track applications</div>
+            <div class="uc">Download summary PDF</div>
+            <div class="uc">View notifications</div>
+          </div>
+          <div class="uc plan" style="margin-top:6px">Reset password (planned)</div>
+        </div>
+
+        <div class="system">
+          <h4>Scout platform</h4>
+          <div class="uc-col"><h5>Account and verification</h5>
+            <div class="uc">Verify email with 6-digit code</div>
+            <div class="uc">Resend code</div>
+            <div class="uc">Register as provider</div>
+            <div class="uc">Log in (student, provider, admin)</div>
+          </div>
+          <div class="uc-col"><h5>Applying</h5>
+            <div class="uc">Review and confirm application</div>
+            <div class="uc inc">Upload documents (extend, if missing)</div>
+            <div class="uc">Receive reference number and receipt</div>
+          </div>
+          <div class="uc-col"><h5>Provider</h5>
+            <div class="uc">Create listing (waits for approval)</div>
+            <div class="uc">Edit or remove own listing</div>
+            <div class="uc">View applicants</div>
+            <div class="uc">Update status and outcome</div>
+          </div>
+          <div class="uc-col"><h5>Admin</h5>
+            <div class="uc">Review pending listings</div>
+            <div class="uc">Verify listing</div>
+          </div>
+          <div class="uc plan">Manage users (planned)</div>
+          <div class="uc plan">Suspend listing or account (planned)</div>
+          <div class="uc plan">Monitor platform (planned)</div>
+        </div>
+
+        <div>
+          <div class="actor prov">Provider</div>
+          <div style="height:12px"></div>
+          <div class="uc-col"><h5>Account</h5>
+            <div class="uc">Register as provider</div>
+            <div class="uc">Log in</div>
+          </div>
+          <div class="uc-col"><h5>Listings</h5>
+            <div class="uc">Create, edit, remove</div>
+          </div>
+          <div class="uc-col"><h5>Applicants</h5>
+            <div class="uc">View applicants and documents</div>
+            <div class="uc">Update status and outcome</div>
+          </div>
+          <div style="height:14px"></div>
+          <div class="actor adm">Admin</div>
+          <div style="height:12px"></div>
+          <div class="uc-col"><h5>Admin</h5>
+            <div class="uc">Log in (is_staff plus admin row)</div>
+            <div class="uc">Review queue, verify listing</div>
+          </div>
+          <div style="height:14px"></div>
+          <div class="actor ext">Email service (Brevo SMTP)</div>
+          <div class="uc-col" style="margin-top:8px"><h5>Sends</h5>
+            <div class="uc">Verification code</div>
+            <div class="uc">Receipt and missing-document alert</div>
+            <div class="uc">Status and outcome updates</div>
+            <div class="uc">Deadline reminder (scheduled job)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="rel"><b>Relationships:</b> Register <i>includes</i> Verify email. Resend code <i>extends</i> Verify email. Review and confirm <i>includes</i> Upload documents only when documents are missing (review blocks the submit until they are uploaded).</p>
+    <div class="src">Sources: <code>accounts/urls.py</code>, <code>applications/urls.py</code>, <code>notifications/management/commands/send_bookmark_reminders.py</code>, <code>accounts/views.py</code>.</div>
+    <div class="verify"><strong>Check before finalising</strong><ul>
+      <li>Draw the three actors as UML actor figures outside the system boundary, and the email service as a secondary actor.</li>
+      <li>Planned items: grey, dashed ovals, labelled planned. Do not draw them as working.</li>
+    </ul></div>
+  </section>
+
+  <!-- ============================================================ ACTIVITY -->
+  <section id="activity">
+    <h2>2 · Activity diagram: student application flow</h2>
+    <p class="lede">Four swimlanes. Amber boxes are decisions. Grey dashed boxes are planned. The flow starts at signup and ends at the receipt and the status updates.</p>
+
+    <div class="fix-grid">
+      <div class="card"><span class="tag t-del">Remove</span><ul>
+        <li><b>Resume application</b> as a separate step. The alert links to <code>/apply/&lt;id&gt;?resume=documents</code>, so the student goes back into the same review flow.</li>
+        <li><b>Set reminder</b> on bookmark as a student action. Reminders are a scheduled system job.</li>
+        <li><b>Sort by closing date</b> as a separate step. It is part of the list query.</li>
+      </ul></div>
+      <div class="card"><span class="tag t-chg">Fix</span><ul>
+        <li><b>Verify email</b> is a 6-digit code. A wrong code offers resend (max 3, 60 s cooldown, 5 attempts). A correct code signs the student in.</li>
+        <li>After verification the student goes straight to the dashboard. Do not route back through Login.</li>
+        <li><b>Generate receipt</b> → <b>Create application</b>: status Submitted, reference number, receipt email.</li>
+        <li><b>Filter eligible</b> names the real rule: verified, active, unexpired, matches field, type, average, year, qualification (or higher) and province.</li>
+      </ul></div>
+      <div class="card"><span class="tag t-add">Add</span><ul>
+        <li><b>Returning login</b>: an unverified account is told to verify first.</li>
+        <li><b>Already applied?</b> check (409). One application per student per listing.</li>
+        <li><b>Missing documents</b> branch: review shows the gap, sends the alert once, and blocks confirm (400).</li>
+        <li><b>Bookmark</b> and <b>Download summary PDF</b> branches.</li>
+        <li>Provider and admin lanes (see sections 3 and 4).</li>
+      </ul></div>
+    </div>
+
+    <h3>Diagram</h3>
+    <div class="board">
+      <div class="legend">
+        <span><i style="background:var(--stu);border-color:var(--stu-l)"></i>Student</span>
+        <span><i style="background:var(--sys);border-color:var(--sys-l)"></i>System</span>
+        <span><i style="background:var(--prov);border-color:var(--prov-l)"></i>Provider</span>
+        <span><i style="background:var(--adm);border-color:var(--adm-l)"></i>Admin</span>
+        <span><i style="background:var(--dec);border-color:var(--dec-l)"></i>Decision</span>
+        <span><i style="background:var(--plan);border-color:var(--plan-l);border-style:dashed"></i>Planned</span>
+      </div>
+      <div class="lanes">
+        <div class="lane stu">
+          <div class="lane-h">Student</div>
+          <div class="node term">Start</div>
+          <div class="node">Register as student<small>name, email, password</small></div>
+          <div class="down">↓</div>
+          <div class="node">Enter 6-digit code</div>
+          <div class="node dec">Code correct?<br>no: resend (max 3, 60 s)</div>
+          <div class="down">↓ yes</div>
+          <div class="node">Signed in, build profile<small>Tertiary Student or Graduate</small></div>
+          <div class="node">Upload CV and matric<small>PDF, JPG, PNG, up to 5 MB</small></div>
+          <div class="node">Browse eligible or all</div>
+          <div class="node dec">Action?</div>
+          <div class="node">Bookmark or keep browsing</div>
+          <div class="node">Apply: review screen</div>
+          <div class="node dec">Documents complete?<br>no: go to upload, then review</div>
+          <div class="node">Confirm submit</div>
+          <div class="node term">End</div>
+        </div>
+        <div class="lane sys">
+          <div class="lane-h">System</div>
+          <div class="node">Validate details, create inactive account, email code</div>
+          <div class="node">Activate account on correct code, issue token</div>
+          <div class="node">Matching query (server side, from stored profile)</div>
+          <div class="node">Show verified, active, unexpired listings, flagged eligible</div>
+          <div class="node dec">Already applied? 409</div>
+          <div class="node">Missing-document alert, once, in-app and email</div>
+          <div class="node">Create application, status Submitted, reference number</div>
+          <div class="node">Receipt email and in-app notification</div>
+          <div class="node plan">Summary PDF on demand (built, shown for context)</div>
+        </div>
+        <div class="lane prov">
+          <div class="lane-h">Provider</div>
+          <div class="node">Register as provider, OTP, post listing</div>
+          <div class="node">Listing waits for admin approval</div>
+          <div class="node">View applicants and documents (names, types, no file links)</div>
+          <div class="node dec">Change status?</div>
+          <div class="node">Set Under Review, or record outcome (Successful or Unsuccessful)</div>
+          <div class="node">Status only moves forward. Outcome is final.</div>
+        </div>
+        <div class="lane adm">
+          <div class="lane-h">Admin</div>
+          <div class="node">Log in with admin account</div>
+          <div class="node">Open verification queue</div>
+          <div class="node dec">Verify this listing?</div>
+          <div class="node">Verified, admin recorded on listing</div>
+          <div class="node">Listing now visible to matching students</div>
+          <div class="node plan">Suspend listing or account (planned)</div>
+        </div>
+      </div>
+    </div>
+    <div class="src">Sources: <code>accounts/views.py</code>, <code>applications/views.py</code> (<code>review_application</code>, <code>confirm_application</code>, <code>applicant_detail</code>), <code>opportunities/matching.py</code>, <code>notifications/utils.py</code>, <code>documents/views.py</code>.</div>
+    <div class="verify"><strong>Check before finalising</strong><ul>
+      <li>Status changes can only move forward. An outcome, once recorded, cannot be changed (<code>applicant_detail</code>).</li>
+      <li>Two different alerts go to the student when a document is missing: the review screen tells them in the app, and the alert sends email once. Draw one box, labelled "alert".</li>
+    </ul></div>
+  </section>
+
+  <!-- ============================================================ SEQUENCE -->
+  <section id="sequence">
+    <h2>3 · Sequence diagrams</h2>
+    <p class="lede">Read each table top to bottom. Columns name the actor or system. Each row is one message, with the real endpoint.</p>
+
+    <div class="fix-grid">
+      <div class="card"><span class="tag t-del">Remove</span><ul>
+        <li>"Receive verification link": it is a 6-digit code.</li>
+        <li>"Final decision: Accepted or Rejected" and "periodic updates": the outcome is Successful or Unsuccessful.</li>
+        <li>"Forward completed application to provider": providers pull applicants from the API.</li>
+        <li>"Admin platform monitoring": not built.</li>
+      </ul></div>
+      <div class="card"><span class="tag t-chg">Fix</span><ul>
+        <li>Listing verification: the provider creates via the API (pending). The admin pulls the queue and verifies it. The admin is the only writer of verification.</li>
+        <li>Lifelines: Student, Frontend, Django API, Database, Brevo SMTP, plus Provider and Admin.</li>
+      </ul></div>
+      <div class="card"><span class="tag t-add">Add</span><ul>
+        <li>OTP signup with the valid and wrong/expired branches, plus resend.</li>
+        <li>Login with the unverified branch (403).</li>
+        <li>Duplicate application branch (409) and missing-document branch (400 on confirm).</li>
+        <li>Provider outcome notifies the student in-app and by email.</li>
+      </ul></div>
+    </div>
+
+    <h3>3a · Sign up and verify email (student or provider)</h3>
+    <table>
+      <tr><th>#</th><th>From</th><th>To</th><th>Message</th></tr>
+      <tr><td class="n">1</td><td class="actor-s">Student / provider</td><td class="actor-f">Frontend</td><td>Submit registration form</td></tr>
+      <tr><td class="n">2</td><td class="actor-f">Frontend</td><td class="actor-d">API</td><td><code>POST /api/accounts/register/</code></td></tr>
+      <tr><td class="n">3</td><td class="actor-d">API</td><td class="actor-d">Database</td><td>Insert inactive <code>auth_user</code>, student or provider row, <code>login_otp</code> (hashed code, expires in 5 min)</td></tr>
+      <tr><td class="n">4</td><td class="actor-d">API</td><td class="actor-m">Brevo SMTP</td><td>Send 6-digit code</td></tr>
+      <tr><td class="n">5</td><td class="actor-d">API</td><td class="actor-f">Frontend</td><td>201, returns <code>otp_id</code> and <code>resend_token</code></td></tr>
+      <tr><td class="n">6</td><td class="actor-f">Frontend</td><td class="actor-s">Student</td><td>Show code entry screen</td></tr>
+      <tr><td class="n">7</td><td class="alt" colspan="4"><b>Optional, resend:</b> <code>POST /api/accounts/resend-otp/</code>. Max 3 resends, 60 s cooldown. Old code is replaced.</td></tr>
+      <tr><td class="n">8</td><td class="actor-s">Student</td><td class="actor-f">Frontend</td><td>Enter 6-digit code</td></tr>
+      <tr><td class="n">9</td><td class="actor-f">Frontend</td><td class="actor-d">API</td><td><code>POST /api/accounts/verify-otp/</code></td></tr>
+      <tr><td class="n">10</td><td class="alt" colspan="4"><b>Alt, code valid:</b> set <code>is_active = true</code>, mark code used, set student <code>isemailverified</code>, return token and user with role. Frontend stores it and opens the dashboard.<br><b>Alt, wrong, expired or used:</b> 400 with error. Attempts count up. After 5 attempts the code is locked.</td></tr>
+    </table>
+
+    <h3>3b · Log in (no code) and open eligible opportunities</h3>
+    <table>
+      <tr><th>#</th><th>From</th><th>To</th><th>Message</th></tr>
+      <tr><td class="n">1</td><td class="actor-s">Student</td><td class="actor-f">Frontend</td><td>Enter email and password</td></tr>
+      <tr><td class="n">2</td><td class="actor-f">Frontend</td><td class="actor-d">API</td><td><code>POST /api/accounts/login/</code></td></tr>
+      <tr><td class="n">3</td><td class="alt" colspan="4"><b>Alt, valid and verified:</b> token and user with role returned. <b>Alt, valid but unverified:</b> 403 "Please verify your email first". <b>Alt, invalid:</b> 401.</td></tr>
+      <tr><td class="n">4</td><td class="actor-f">Frontend</td><td class="actor-d">API</td><td><code>GET /api/opportunities/?view=eligible</code> with token (or <code>view=all</code>)</td></tr>
+      <tr><td class="n">5</td><td class="actor-d">API</td><td class="actor-d">Database</td><td>Load profile from the token (never the browser). Run matching query: verified, active, unexpired, rules in <code>matching.py</code>.</td></tr>
+      <tr><td class="n">6</td><td class="actor-d">API</td><td class="actor-f">Frontend</td><td>200 with listings, each flagged eligible, bookmarked and applied</td></tr>
+    </table>
+
+    <h3>3c · Provider posts a listing, admin verifies it</h3>
+    <table>
+      <tr><th>#</th><th>From</th><th>To</th><th>Message</th></tr>
+      <tr><td class="n">1</td><td class="actor-a">Provider</td><td class="actor-f">Frontend</td><td>Fill in listing form</td></tr>
+      <tr><td class="n">2</td><td class="actor-f">Frontend</td><td class="actor-d">API</td><td><code>POST /api/opportunities/provider/listings/</code> (IsProvider)</td></tr>
+      <tr><td class="n">3</td><td class="actor-d">API</td><td class="actor-d">Database</td><td>Insert opportunity, <code>isverified = false</code>, <code>adminid</code> = first active admin (placeholder until verified)</td></tr>
+      <tr><td class="n">4</td><td class="actor-d">API</td><td class="actor-f">Frontend</td><td>201. Listing shows as Pending verification.</td></tr>
+      <tr><td class="n">5</td><td class="actor-m">Admin</td><td class="actor-f">Frontend</td><td>Open <code>/admin/verify</code></td></tr>
+      <tr><td class="n">6</td><td class="actor-f">Frontend</td><td class="actor-d">API</td><td><code>GET /api/providers-admin/listings/pending/</code> (IsAdmin)</td></tr>
+      <tr><td class="n">7</td><td class="actor-m">Admin</td><td class="actor-f">Frontend</td><td>Open detail panel, click Verify</td></tr>
+      <tr><td class="n">8</td><td class="actor-f">Frontend</td><td class="actor-d">API</td><td><code>POST /api/providers-admin/listings/&lt;id&gt;/verify/</code></td></tr>
+      <tr><td class="n">9</td><td class="actor-d">API</td><td class="actor-d">Database</td><td>Set <code>isverified = true</code> and <code>adminid</code> = reviewing admin (audit)</td></tr>
+    </table>
+
+    <h3>3d · Assisted apply, confirm, and provider outcome</h3>
+    <table>
+      <tr><th>#</th><th>From</th><th>To</th><th>Message</th></tr>
+      <tr><td class="n">1</td><td class="actor-s">Student</td><td class="actor-f">Frontend</td><td>Click Apply on a listing</td></tr>
+      <tr><td class="n">2</td><td class="actor-f">Frontend</td><td class="actor-d">API</td><td><code>POST /api/applications/review/</code> with <code>opportunity_id</code></td></tr>
+      <tr><td class="n">3</td><td class="alt" colspan="4"><b>Alt, required documents missing:</b> <code>can_submit = false</code>, the missing list returned, and an alert sent once (in-app and email, with a link back to this review). Frontend shows the upload step.<br><b>Alt, all present:</b> <code>can_submit = true</code>, pre-filled review returned.</td></tr>
+      <tr><td class="n">4</td><td class="actor-s">Student</td><td class="actor-f">Frontend</td><td>Check details, click Confirm</td></tr>
+      <tr><td class="n">5</td><td class="actor-f">Frontend</td><td class="actor-d">API</td><td><code>POST /api/applications/confirm/</code></td></tr>
+      <tr><td class="n">6</td><td class="alt" colspan="4"><b>Alt, already applied:</b> 409 "already applied". <b>Alt, closed:</b> 410. <b>Alt, missing documents:</b> 400.<br><b>Alt, accepted:</b> insert application (status Submitted, reference number). Receipt notification (in-app and email). 201 returned.</td></tr>
+      <tr><td class="n">7</td><td class="actor-a">Provider</td><td class="actor-f">Frontend</td><td>Open applicants for a listing</td></tr>
+      <tr><td class="n">8</td><td class="actor-f">Frontend</td><td class="actor-d">API</td><td><code>GET /api/applications/provider/listings/&lt;id&gt;/applicants/</code></td></tr>
+      <tr><td class="n">9</td><td class="actor-a">Provider</td><td class="actor-f">Frontend</td><td>Set status (Under Review) or record outcome (Successful or Unsuccessful)</td></tr>
+      <tr><td class="n">10</td><td class="actor-f">Frontend</td><td class="actor-d">API</td><td><code>PATCH /api/applications/provider/applicants/&lt;id&gt;/</code>. Forward moves only. Outcome final.</td></tr>
+      <tr><td class="n">11</td><td class="actor-d">API</td><td class="actor-m">Brevo SMTP</td><td>Status or outcome email to student. In-app notification also created.</td></tr>
+      <tr><td class="n">12</td><td class="actor-s">Student</td><td class="actor-f">Frontend</td><td>Open My applications. Dashboard polls <code>/api/applications/mine/</code> and <code>/api/notifications/</code>.</td></tr>
+    </table>
+    <div class="src">Sources: <code>applications/views.py</code>, <code>applications/urls.py</code>, <code>notifications/utils.py</code>, <code>accounts/views.py</code>, <code>providers_admin/views.py</code>.</div>
+    <div class="verify"><strong>Check before finalising</strong><ul>
+      <li>Step 6 of 3d: the review step returns 409 for duplicates on the confirm call. Match the status codes in the diagram to the code, not to this page, if they change.</li>
+      <li>Deadline reminders (3 days before close) are sent by <code>send_bookmark_reminders</code>. Show as a scheduled job lane, not as a user action.</li>
+    </ul></div>
+  </section>
+
+  <!-- ============================================================ CLASS -->
+  <section id="class">
+    <h2>4 · Class diagram</h2>
+    <p class="lede">Each class is a Django model mapped to one table, except the permission classes and the Django auth user. Methods are shown only where a view does more than a plain read or write.</p>
+
+    <div class="fix-grid">
+      <div class="card"><span class="tag t-del">Remove</span><ul>
+        <li>Generic <b>User</b> with its own password. Login uses Django's <code>auth_user</code>.</li>
+        <li><code>AdminID</code> on Opportunity Provider, which was the wrong key.</li>
+        <li><code>SummaryReport()</code>, <code>Close()</code>, <code>DeleteOpportunities()</code>. These are view actions or fields, not model methods.</li>
+      </ul></div>
+      <div class="card"><span class="tag t-chg">Fix</span><ul>
+        <li><b>Opportunity Provider</b> → <b>Provider</b>. <b>Admin</b> → <b>PlatformAdmin</b> (linked by email plus <code>is_staff</code>).</li>
+        <li>Opportunity fields: <code>fieldofstudy</code>, <code>closingdate</code>, <code>eligibilitytype</code>, and the optional criteria.</li>
+        <li>Notification belongs to Student, and optionally to an Application or a Bookmark.</li>
+        <li>Application links to Student and Opportunity. Both sides need a multiplicity.</li>
+      </ul></div>
+      <div class="card"><span class="tag t-add">Add</span><ul>
+        <li><b>LoginOtp</b>, <b>Profile</b>, <b>Document</b>, <b>Bookmark</b>, <b>Notification</b></li>
+        <li>Permission classes <b>IsStudent</b>, <b>IsProvider</b>, <b>IsAdmin</b> (they attach the role row to the request)</li>
+        <li>Matched-by-email link between PlatformAdmin and auth user</li>
+      </ul></div>
+    </div>
+
+    <h3>Diagram</h3>
+    <div class="board">
+      <div class="cards">
+        <div class="ent ext"><h4>auth_user (Django)</h4><ul>
+          <li>id, email</li><li>password (hashed)</li><li>is_active</li><li>is_staff</li>
+          <li class="note">Owned by Django, not schema.sql</li></ul></div>
+        <div class="ent"><h4>LoginOtp</h4><ul>
+          <li>code_hash, resend_token_hash</li><li>resend_count (max 3)</li><li>attempts (max 5)</li><li>expires_at (5 min)</li><li>is_used</li>
+          <li class="note">issue(), verify(code), resend()</li></ul></div>
+        <div class="ent"><h4>Student</h4><ul>
+          <li>studentid, auth_user (1:1)</li><li>firstname, lastname, email</li><li>isemailverified</li><li>accountstatus</li>
+          <li class="note">register(), verify_otp(code)</li></ul></div>
+        <div class="ent"><h4>Profile</h4><ul>
+          <li>studenttype, institution</li><li>fieldofstudy, academicaverage</li><li>opportunitypreference, province</li><li>yearlevel (tertiary)</li><li>graduatetype, qualification (graduate)</li></ul></div>
+        <div class="ent"><h4>Document</h4><ul>
+          <li>documenttype, filename, fileurl</li><li>filesize (max 5 MB)</li><li>isactive (false when replaced)</li>
+          <li class="note">upload(), signed_url()</li></ul></div>
+        <div class="ent"><h4>Provider</h4><ul>
+          <li>providerid, auth_user (1:1)</li><li>companyname, email</li><li>industry, province, phone</li>
+          <li class="note">create_listing(), view_applicants()</li></ul></div>
+        <div class="ent"><h4>PlatformAdmin</h4><ul>
+          <li>adminid, email</li><li>role, isactive</li><li class="note">matched to auth_user by email, with is_staff</li>
+          <li class="note">verify_listing(), pending_listings()</li></ul></div>
+        <div class="ent"><h4>Opportunity</h4><ul>
+          <li>opportunityid, title</li><li>opportunitytype, fieldofstudy</li><li>minimumaverage, yearlevelrequired</li><li>requiredqualification, eligibilitytype</li><li>province, closingdate</li><li>isverified, isactive</li>
+          <li class="note">Provider 1..*, PlatformAdmin 1..* (audit)</li></ul></div>
+        <div class="ent"><h4>Application</h4><ul>
+          <li>applicationid, referencenumber</li><li>status (Submitted, Under Review, Outcome Received)</li><li>submittedat, reviewedat</li><li>outcomeresult, outcomereceivedat</li>
+          <li class="note">UNIQUE(student, opportunity)</li></ul></div>
+        <div class="ent"><h4>Bookmark</h4><ul>
+          <li>bookmarkid, savedat</li><li>remindersent</li><li class="note">UNIQUE(student, opportunity)</li></ul></div>
+        <div class="ent"><h4>Notification</h4><ul>
+          <li>notificationid, notificationtype</li><li>channel (in_app or email)</li><li>message, isread, sentat</li><li class="note">application or bookmark (not both)</li></ul></div>
+        <div class="ent ext"><h4>IsStudent, IsProvider, IsAdmin</h4><ul>
+          <li>&lt;&lt;permission&gt;&gt;</li><li>resolves the role row</li><li>sets request.student / provider / admin</li></ul></div>
+      </div>
+      <div class="rels" style="margin-top:14px">
+        <div><b>auth_user</b> 1 – 0..1 <b>Student</b>, 1 – 0..1 <b>Provider</b>, 1 – 0..* <b>LoginOtp</b>, 1 ··· 0..1 <b>PlatformAdmin</b> (matched by email)</div>
+        <div><b>Student</b> 1 – 1 <b>Profile</b>, 1 – 0..* <b>Document</b>, <b>Application</b>, <b>Bookmark</b>, <b>Notification</b></div>
+        <div><b>Provider</b> 1 – 0..* <b>Opportunity</b>. <b>PlatformAdmin</b> 0..1 – 0..* <b>Opportunity</b> (verification audit)</div>
+        <div><b>Opportunity</b> 1 – 0..* <b>Application</b>, <b>Bookmark</b>. <b>Application</b> / <b>Bookmark</b> 0..1 – 0..* <b>Notification</b></div>
+      </div>
+    </div>
+    <div class="src">Sources: <code>accounts/models.py</code>, <code>applications/models.py</code>, <code>providers_admin/models.py</code>, <code>opportunities/models.py</code>, <code>notifications/models.py</code>, <code>documents/models.py</code>, <code>core/permissions.py</code>.</div>
+    <div class="verify"><strong>Check before finalising</strong><ul>
+      <li>Method names are conceptual. If the team wants exact names, use the real view functions (for example <code>verify_listing</code>, <code>applicant_detail</code>).</li>
+      <li>Check the <code>documents/models.py</code> field names before copying them. They are the Django names, not the column names.</li>
+    </ul></div>
+  </section>
+
+  <!-- ============================================================ ERD -->
+  <section id="erd">
+    <h2>5 · Entity relationship diagram</h2>
+    <p class="lede">Database tables with lowercase column names, as in <code>database/schema.sql</code>. <span style="color:#2563eb">FK</span> marks a foreign key. Shaded cards are Django's own table or a missing schema item.</p>
+
+    <div class="fix-grid">
+      <div class="card"><span class="tag t-del">Remove</span><ul>
+        <li><code>ReceivedAt</code> on Application (the columns are <code>reviewedat</code> and <code>outcomereceivedat</code>)</li>
+        <li><code>MininumAverage</code> misspelling (<code>minimumaverage</code>)</li>
+        <li>Student <code>passwordhash</code> is legacy. Mark it unused.</li>
+      </ul></div>
+      <div class="card"><span class="tag t-chg">Fix</span><ul>
+        <li><b>opportunity.adminid</b> is NOT NULL. Set to a placeholder on creation, overwritten when verified.</li>
+        <li><b>Eligibility type</b> is never NULL. <code>Any</code> means both.</li>
+        <li><b>Notification</b> FKs to application and bookmark are nullable, and at most one is set.</li>
+        <li><b>login_otp</b> columns: <code>user_id</code>, <code>code_hash</code>, <code>resend_token_hash</code>, <code>resend_count</code>, <code>created_at</code>, <code>expires_at</code>, <code>attempts</code>, <code>is_used</code>.</li>
+      </ul></div>
+      <div class="card"><span class="tag t-add">Add</span><ul>
+        <li><b>auth_user</b> (Django) and <b>login_otp</b></li>
+        <li><code>student.authuserid</code> and <code>provider.authuserid</code> (both UNIQUE, the provider one is missing from <code>schema.sql</code>)</li>
+        <li>Profile: <code>studenttype</code>, <code>graduatetype</code>, <code>qualification</code></li>
+        <li>Opportunity: <code>requiredqualification</code></li>
+        <li>UNIQUE(<code>studentid</code>, <code>opportunityid</code>) on Application and Bookmark</li>
+      </ul></div>
+    </div>
+
+    <h3>Tables</h3>
+    <div class="board">
+      <div class="cards">
+        <div class="ent ext"><h4>auth_user (Django)</h4><ul>
+          <li><span class="pk">PK</span> id</li><li>username, email</li><li>password (hashed)</li><li>is_active, is_staff</li></ul></div>
+        <div class="ent"><h4>login_otp</h4><ul>
+          <li><span class="pk">PK</span> id</li><li><span class="fk">FK</span> user_id → auth_user</li><li>code_hash, resend_token_hash</li><li>resend_count, attempts</li><li>created_at, expires_at, is_used</li></ul></div>
+        <div class="ent"><h4>student</h4><ul>
+          <li><span class="pk">PK</span> studentid</li><li><span class="fk">FK</span> authuserid (unique)</li><li>firstname, lastname, email (unique)</li><li>isemailverified, accountstatus</li><li>passwordhash (legacy, unused)</li><li>createdat, updatedat</li></ul></div>
+        <div class="ent"><h4>profile</h4><ul>
+          <li><span class="pk">PK</span> profileid</li><li><span class="fk">FK</span> studentid (unique)</li><li>studenttype, institution</li><li>fieldofstudy, academicaverage</li><li>opportunitypreference, province</li><li>yearlevel (tertiary only)</li><li>graduatetype, qualification (graduate only)</li></ul></div>
+        <div class="ent"><h4>document</h4><ul>
+          <li><span class="pk">PK</span> documentid</li><li><span class="fk">FK</span> studentid</li><li>documenttype, filename, fileurl</li><li>filesize, uploadedat</li><li>isactive (false when replaced)</li></ul></div>
+        <div class="ent"><h4>provider</h4><ul>
+          <li><span class="pk">PK</span> providerid</li><li><span class="fk">FK</span> authuserid (unique) (add to schema.sql)</li><li>companyname, email (unique)</li><li>phone, industry, province</li><li>createdat, updatedat</li></ul></div>
+        <div class="ent"><h4>admin</h4><ul>
+          <li><span class="pk">PK</span> adminid</li><li>firstname, lastname</li><li>email (unique, matches auth_user)</li><li>password, role, isactive</li><li>createdat, lastloginat</li></ul></div>
+        <div class="ent"><h4>opportunity</h4><ul>
+          <li><span class="pk">PK</span> opportunityid</li><li><span class="fk">FK</span> providerid, adminid (NOT NULL)</li><li>title, opportunitytype, fieldofstudy</li><li>minimumaverage, yearlevelrequired</li><li>requiredqualification, eligibilitytype</li><li>province, description, closingdate</li><li>isverified, isactive, postedat</li></ul></div>
+        <div class="ent"><h4>application</h4><ul>
+          <li><span class="pk">PK</span> applicationid</li><li><span class="fk">FK</span> studentid, opportunityid</li><li>referencenumber (unique)</li><li>status, submittedat</li><li>reviewedat, outcomereceivedat, outcomeresult</li><li>updatedat</li><li>UNIQUE(studentid, opportunityid)</li></ul></div>
+        <div class="ent"><h4>bookmark</h4><ul>
+          <li><span class="pk">PK</span> bookmarkid</li><li><span class="fk">FK</span> studentid, opportunityid</li><li>savedat, remindersent</li><li>UNIQUE(studentid, opportunityid)</li></ul></div>
+        <div class="ent"><h4>notification</h4><ul>
+          <li><span class="pk">PK</span> notificationid</li><li><span class="fk">FK</span> studentid</li><li><span class="fk">FK</span> applicationid, bookmarkid (nullable, not both)</li><li>notificationtype, channel</li><li>message, isread, sentat</li></ul></div>
+      </div>
+    </div>
+
+    <h3>Relationships</h3>
+    <div class="rels">
+      <div><b>auth_user</b> → <b>student</b> (authuserid, 1 to 0..1)</div>
+      <div><b>auth_user</b> → <b>provider</b> (authuserid, 1 to 0..1)</div>
+      <div><b>auth_user</b> → <b>login_otp</b> (user_id, 1 to many)</div>
+      <div><b>student</b> → <b>profile</b> (1 to 1), <b>document</b>, <b>application</b>, <b>bookmark</b>, <b>notification</b> (1 to many)</div>
+      <div><b>provider</b> → <b>opportunity</b> (providerid, 1 to many)</div>
+      <div><b>admin</b> → <b>opportunity</b> (adminid, 1 to many, verification audit)</div>
+      <div><b>opportunity</b> → <b>application</b>, <b>bookmark</b> (1 to many)</div>
+      <div><b>application</b> or <b>bookmark</b> → <b>notification</b> (0..1 to many)</div>
+    </div>
+    <div class="src">Sources: <code>database/schema.sql</code>, <code>accounts/models.py</code>, <code>applications/models.py</code>, <code>notifications/models.py</code>.</div>
+    <div class="verify"><strong>Check before finalising</strong><ul>
+      <li>Add <code>provider.authuserid</code> to <code>database/schema.sql</code> so the schema file matches the live database. This is a documentation fix only.</li>
+      <li>Varchar lengths: copy from <code>schema.sql</code> if you show them.</li>
+    </ul></div>
+  </section>
+
+  <!-- ============================================================ ARCHITECTURE -->
+  <section id="architecture">
+    <h2>6 · Application architecture</h2>
+    <p class="lede">Read top to bottom. The browser calls the Django API over HTTPS. Only the backend touches the database, file storage and email.</p>
+
+    <div class="fix-grid">
+      <div class="card"><span class="tag t-chg">Fix</span><ul>
+        <li>Replace "Browse" with <b>Eligible and All</b> (<code>pages/Eligible.jsx</code>). <code>Browse.jsx</code> does not exist.</li>
+        <li>The OTP flow sits in <code>accounts</code>. Show <code>login_otp</code> in the database box.</li>
+        <li>Hosting labels (Netlify, Railway or Render) are team decisions. Confirm before publishing.</li>
+      </ul></div>
+      <div class="card"><span class="tag t-add">Add</span><ul>
+        <li><b>Brevo SMTP</b> as an external service (sends codes, receipts, alerts, updates)</li>
+        <li><b>core/permissions</b> layer: IsStudent, IsProvider, IsAdmin</li>
+        <li><b>providers_admin</b> endpoints: pending queue and verify</li>
+        <li><b>Scheduled job</b> for <code>send_bookmark_reminders</code> (three days before closing)</li>
+        <li><b>Audit log</b>: status changes are written to the application log. A database audit table is planned.</li>
+      </ul></div>
+      <div class="card"><span class="tag t-del">Remove or mark</span><ul>
+        <li>Applications and notifications: built, not "in progress". Mark the summary PDF and reminder job as built.</li>
+        <li>Anything named "password reset" or "monitoring": planned only.</li>
+      </ul></div>
+    </div>
+
+    <h3>Diagram</h3>
+    <div class="board">
+      <div class="layer" style="background:var(--stu)">
+        <h4 style="color:var(--stu-t)">Users</h4>
+        <div class="boxes">
+          <div class="bx">Student</div><div class="bx">Provider</div><div class="bx">Administrator</div>
+        </div>
+      </div>
+      <div class="conn">↓ HTTPS, JSON, Token header (lib/api.js)</div>
+      <div class="layer" style="background:var(--adm)">
+        <h4 style="color:var(--adm-t)">Frontend: React, Vite, Tailwind</h4>
+        <div class="boxes">
+          <div class="bx">Pages: Landing, Register, Login, Eligible, Profile, Dashboard, AdminVerify<small>src/pages/</small></div>
+          <div class="bx">AuthContext and RequireAuth (role routing)<small>src/context, src/components</small></div>
+          <div class="bx">api.js (one function per endpoint)<small>src/lib/api.js</small></div>
+        </div>
+      </div>
+      <div class="conn">↓ /api/...</div>
+      <div class="layer" style="background:var(--sys)">
+        <h4 style="color:var(--sys-t)">Backend: Django REST Framework</h4>
+        <div class="boxes">
+          <div class="bx">URL router<small>scout_backend/urls.py</small></div>
+          <div class="bx">Permissions: IsStudent, IsProvider, IsAdmin<small>core/permissions.py</small></div>
+          <div class="bx">accounts: register, login, verify-otp, resend-otp<small>accounts/views.py, otp_utils.py</small></div>
+          <div class="bx">opportunities: eligible, all, provider listings<small>matching.py</small></div>
+          <div class="bx">applications: review, confirm, bookmarks, outcomes<small>applications/views.py</small></div>
+          <div class="bx">providers_admin: pending queue, verify<small>providers_admin/views.py</small></div>
+          <div class="bx">documents: upload, list, signed URL<small>documents/views.py</small></div>
+          <div class="bx">notifications: in-app feed, email<small>notifications/utils.py</small></div>
+          <div class="bx plan">Password reset (planned)</div>
+        </div>
+      </div>
+      <div class="conn">↓ ORM and parameterised SQL, file upload, SMTP</div>
+      <div class="layer" style="background:var(--prov)">
+        <h4 style="color:var(--prov-t)">Data and external services</h4>
+        <div class="boxes">
+          <div class="bx">Supabase PostgreSQL<small>auth_user, student, profile, document, provider, admin, opportunity, application, bookmark, notification, login_otp</small></div>
+          <div class="bx">Supabase Storage<small>documents bucket, server-side key only</small></div>
+          <div class="bx">Brevo SMTP<small>smtp-relay.brevo.com:587, STARTTLS</small></div>
+        </div>
+      </div>
+    </div>
+    <div class="src">Sources: <code>backend/scout_backend/settings.py</code>, <code>backend/*/urls.py</code>, <code>frontend/src/App.jsx</code>, <code>frontend/src/lib/api.js</code>.</div>
+  </section>
+
+  <footer>Scout · final-year group project · verified diagram reference. Every element on this page was checked against the code. Re-check after any change to the views or models.</footer>
+</div>
+</body>
+</html>
