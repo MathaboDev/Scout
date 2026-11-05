@@ -8,7 +8,7 @@ class Provider(models.Model):
     A company that posts opportunities (FR10).
 
     Maps to the hand-written `provider` table. `auth_user` relies on the
-    authuserid column added by sql/2026-10-27_provider_auth.sql, the same
+    authuserid column defined in database/schema.sql, the same
     pattern student.authuserid uses, so a provider can log in through the
     shared /api/accounts/login/ endpoint.
     """
