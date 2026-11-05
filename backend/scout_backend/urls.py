@@ -36,6 +36,6 @@ urlpatterns = [
     path("api/opportunities/", include("opportunities.urls")),
     path("api/applications/", include("applications.urls")),
     path("api/notifications/", include("notifications.urls")),
-    #path("api/providers-admin/", include("providers_admin.urls")),
+    path("api/providers-admin/", include("providers_admin.urls")),
     path("api/", include("documents.urls")),
 ]

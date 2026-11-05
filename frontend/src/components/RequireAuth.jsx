@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 export const HOME_FOR_ROLE = {
   student: "/eligible",
   provider: "/provider/dashboard",
+  admin: "/admin/verify",
 };
 
 // Wrap a route element: <RequireAuth role="student"><Eligible /></RequireAuth>

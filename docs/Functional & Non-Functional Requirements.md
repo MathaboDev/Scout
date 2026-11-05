@@ -1,56 +1,65 @@
-## **SCOUT  Final Functional & Non-Functional Requirements**
+# Scout — Functional & Non-Functional Requirements
 
-### **Functional Requirements**
-
-**FR1. Registration & Profile Setup**  
- Students create an account with full name, email, and password, with email verification required before full access. Profiles contain only professional information: name, email, field of study, institution, year of study, academic average, and opportunity preference (internship, learnership, graduate programme). Explicitly excluded: ID numbers, home address, banking details, health information, race, salary expectations. Students upload their matric certificate, academic transcript, and proof of registration once; documents are stored securely, reused across applications, and may be updated or replaced at any time.
-
-**FR2. Eligibility-Based Opportunity Matching & View Toggle** *(revised)*  
- The system displays opportunities to students via two views, toggled by the student: **"Eligible Opportunities"** (default), showing only listings matching the student's profile, field of study, year level, and opportunity type,  and **"View All Opportunities"**, showing every verified, active listing regardless of eligibility. Filtering by location, field of study, or opportunity type has been removed in favor of this toggle. In both views, listings past their closing date are hidden or clearly flagged.
-
-**FR3. Assisted Application**  
- The system pre-fills application forms using stored profile data and attaches relevant documents. Before submission, a mandatory review screen displays all pre-filled information and attachments. The system will not submit any application without the student's explicit confirmation on this screen.
-
-**FR4. Missing Document Detection & Notification**  
- When a required document is missing from the student's profile, the system detects this and notifies the student via email with a direct link to upload it. Once uploaded, the assisted application flow resumes, again requiring the mandatory review screen before submission.
-
-**FR5. Application Receipt, Submission Report & Downloadable Summary**  
- After each successful submission, the system generates a receipt containing the student's name, opportunity name and provider, submission date, and unique reference number. The receipt is accessible from the dashboard and emailed to the student. The system also generates a downloadable summary report of all applications made, including total submissions, status breakdown (Submitted, Under Review, Outcome Received), and all reference numbers.
-
-**FR6. Application Tracking**  
- A centralised dashboard displays all submitted applications and their current status (Submitted, Under Review, Outcome Received), updating automatically when a provider changes an application's status, eliminating the need to check external portals.
-
-**FR7. Bookmarking, Deadline Reminders & Notifications**  
- Students may bookmark opportunities they're not ready to apply for; bookmarks display on the dashboard with closing dates. The system sends an automated reminder three days before a bookmarked opportunity's closing date via email and in-app notification, plus real-time notifications when an application is submitted, a document is missing, an application status changes, or a provider updates an outcome.
-
-**FR8. Data Privacy and POPIA Compliance**  
- The system strictly separates professional information (name, education, skills, qualifications) from sensitive information (ID number, home address, banking details, health information, race, ethnicity). Sensitive fields are never shared without explicit consent. The system complies with POPIA by allowing users to view, restrict, and delete their personal data at any time, with clear communication of what is stored, how it's used, and who can access it.
-
-**FR9. Verified and Current Listings**  
- All opportunity listings must be verified by a platform administrator before going live. Expired listings are immediately hidden or removed from student views once the closing date passes.
-
-**FR10. Provider and Administrator Management**  
- Providers can create, edit, and remove their own listings, view eligible applicants, and update application outcomes. Administrators can manage all users and listings, monitor platform activity, and suspend accounts or listings that violate platform integrity.
+**Status:** Current (reflects the admin side, provider self-registration, and email OTP verification shipped in this build).
 
 ---
 
-### **Non-Functional Requirements**
+## Functional Requirements
 
-**NFR1. Security & Data Protection**  
- All user data encrypted in transit and at rest. Sensitive information (ID numbers, banking details, health information) must never appear in logs or API responses. Required under POPIA (No. 4 of 2013). Authentication sessions expire after inactivity; users can log out and invalidate sessions from any device.
+**FR1. Registration, Email Verification & Profile Setup**
+Students and providers both self-register through the platform. A one-time password (OTP) is sent to the registered email address; the account remains inactive and cannot sign in until the OTP is verified. After verification, the user is authenticated automatically. Student profiles contain only professional information: name, email, field of study, institution, year of study, academic average, and opportunity preference. Explicitly excluded: ID numbers, home address, banking details, health information, race, salary expectations. Students upload their CV and matric certificate once; documents are reused across applications and may be updated at any time.
 
-**NFR2. Reliability & Notification Accuracy**  
- At least 99% uptime, particularly during peak application periods. Deadline reminders delivered within one minute of scheduled time; real-time status notifications reach the student within 30 seconds of a status change.
+**FR2. Eligibility-Based Opportunity Matching & View Toggle**
+Students see opportunities through two views, toggled by the student: **Eligible Opportunities** (default), showing only verified active listings that match the student's profile, and **View All Opportunities**, showing every verified active listing regardless of eligibility. Expired listings are hidden from both views.
 
-**NFR3. Usability**  
- A first-time user completes registration, profile setup, and first application within ten minutes without external guidance. Fully responsive across desktop and tablet browsers. Error messages are plain, actionable, and specific about what went wrong and what to do next.
+**FR3. Assisted Application**
+The system pre-fills application forms using stored profile data and attaches relevant documents. A mandatory review screen displays all pre-filled information and attachments before any submission is accepted.
 
-**NFR4. Performance**  
- Opportunity search/listing results (eligible or all view) load within two seconds under normal network conditions. Supports at least 500 concurrent users without response-time degradation.
+**FR4. Missing Document Detection & Notification**
+When a required document is missing, the system notifies the student via email with a direct link to upload it. Once uploaded, the application flow resumes with the mandatory review screen.
 
-**NFR5. Data Integrity**  
- The system prevents duplicate application submissions for the same opportunity at the database level, not just the interface level. All application status changes made by providers are logged with a timestamp and the responsible provider account, and reflected on the student's dashboard within 30 seconds.
+**FR5. Application Receipt, Submission Report & Downloadable Summary**
+Each successful submission produces a receipt (student name, opportunity, provider, submission date, reference number) accessible from the dashboard and emailed to the student. A downloadable summary report lists all applications, status breakdown and reference numbers.
 
-**NFR6. Maintainability & Scalability**  
- Modular architecture, component-based frontend, RESTful backend,  so features can be updated independently. Database and backend services designed to scale horizontally to accommodate national-scale usage from the outset.
+**FR6. Application Tracking**
+A centralised dashboard displays every submitted application and its current status (Submitted, Under Review, Outcome Received), updating when a provider changes an application's status.
 
+**FR7. Bookmarking, Deadline Reminders & Notifications**
+Students may bookmark opportunities. A reminder is sent via email and in-app notification three days before a bookmarked opportunity closes. Real-time notifications also fire on submission, missing documents, status changes and outcome updates.
+
+**FR8. Data Privacy and POPIA Compliance**
+The system strictly separates professional information from sensitive personal information. Sensitive fields are never shared without explicit consent. Users can view, restrict and delete their personal data at any time, with clear communication of what is stored and how it is used, in line with POPIA (Act 4 of 2013).
+
+**FR9. Verified and Current Listings**
+Every opportunity listing is held in an administrator verification queue until an admin approves it; only verified, active, un-expired listings reach students. Verification is performed through the admin dashboard, with the responsible administrator's ID recorded on the listing as an audit trail.
+
+**FR10. Provider & Administrator Capabilities**
+Providers create, edit and remove their own listings, view eligible applicants, and update application outcomes. Administrators review and verify pending listings before they go live and keep an audit trail of who verified what.
+
+**FR11. Role-Based Access**
+Three roles exist: student, provider and administrator. Each role has its own entry point, dashboard and permitted actions. A user's role is determined by the backend (never the client) from their underlying database record.
+
+---
+
+## Non-Functional Requirements
+
+**NFR1. Security & Data Protection**
+All data encrypted in transit (HTTPS) and at rest (Supabase-hosted PostgreSQL). OTP codes are only ever stored as salted hashes; plaintext OTPs never appear in logs or API responses. Sensitive personal information is never logged. Authentication is token-based (DRF `TokenAuthentication`); tokens can be invalidated by the user via logout.
+
+**NFR2. Reliability & Notification Accuracy**
+Target 99% uptime, particularly during peak application periods. Deadline reminders are delivered within one minute of scheduled time; status notifications reach the student within 30 seconds of a provider status change.
+
+**NFR3. Usability**
+A first-time user completes registration, email verification, profile setup and their first application within ten minutes without external guidance. The interface is fully responsive across desktop and tablet. Error messages are plain, actionable and specific.
+
+**NFR4. Performance**
+Opportunity listings load within two seconds under normal network conditions. The system supports at least 500 concurrent users without response-time degradation.
+
+**NFR5. Data Integrity**
+Duplicate application submissions are prevented at the database level via a unique `(studentid, opportunityid)` constraint. Application status changes are timestamped and reflected on the student dashboard within 30 seconds.
+
+**NFR6. Maintainability & Scalability**
+Modular Django app structure, component-based React frontend, RESTful API. Database and backend services run on Supabase and can be scaled horizontally. Role logic is centralised in `core.permissions`; adding a new role is a localised change.
+
+**NFR7. Authentication Hardening**
+OTP verification enforces a maximum of five code-entry attempts, five-minute code expiry, a 60-second cooldown between code issues, and a maximum of three resends per challenge. Verification and resend endpoints are rate-limited per IP.

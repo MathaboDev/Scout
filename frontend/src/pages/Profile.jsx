@@ -7,6 +7,7 @@ import {
   UploadCloud,
   Pencil,
   Save,
+  Loader2,
 } from "lucide-react";
 import AppShell from "../components/AppShell.jsx";
 import FormField from "../components/FormField.jsx";
@@ -261,8 +262,19 @@ export default function Profile() {
     }
   }
 
+  if (loading) {
+    return (
+      <AppShell
+        title="Profile"
+        subtitle="Keep your professional information up to date so Scout can use it when matching opportunities."
+      >
+        <ProfileSkeleton />
+      </AppShell>
+    );
+  }
+
   return (
-  
+
 
     <AppShell
       title="Profile"
@@ -585,6 +597,72 @@ function DocumentRow({ doc, state, onUpload }) {
     </div>
     
       );
+}
+
+// Shown while the profile + documents API calls are in flight. Mirrors the
+// real page layout so the switch to loaded content doesn't shift anything,
+// and makes it obvious the data is coming rather than showing an empty
+// profile at 0% completion.
+function ProfileSkeleton() {
+  const bar = "bg-gray-bg/80 rounded";
+  return (
+    <div className="animate-pulse">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-xl2 border border-line bg-white px-6 py-5">
+        <div className="flex items-center gap-3.5">
+          <span className="h-[52px] w-[52px] shrink-0 rounded-full bg-gray-bg" />
+          <div className="space-y-2">
+            <div className={`${bar} h-4 w-40`} />
+            <div className={`${bar} h-3 w-56`} />
+            <div className={`${bar} h-3 w-32`} />
+          </div>
+        </div>
+        <div className="w-full max-w-[220px] sm:w-[220px]">
+          <div className="mb-1.5 flex items-center justify-end gap-1.5 text-xs text-muted">
+            <Loader2 size={12} className="animate-spin" />
+            <span>Loading profile...</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-gray-bg">
+            <div className="h-full w-1/3 rounded-full bg-ink/40" />
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-5 rounded-xl2 border border-line bg-white p-6">
+        <div className={`${bar} mb-5 h-5 w-40`} />
+        <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
+          <div className={`${bar} h-10`} />
+          <div className={`${bar} h-10`} />
+        </div>
+      </div>
+
+      <div className="mb-5 rounded-xl2 border border-line bg-white p-6">
+        <div className={`${bar} mb-5 h-5 w-48`} />
+        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className={`${bar} h-3 w-24`} />
+              <div className={`${bar} h-4 w-40`} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl2 border border-line bg-white p-6">
+        <div className={`${bar} mb-5 h-5 w-32`} />
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between border-b border-line pb-3 last:border-b-0">
+              <div className="flex items-center gap-2.5">
+                <FileText size={16} className="shrink-0 text-muted/40" />
+                <div className={`${bar} h-4 w-40`} />
+              </div>
+              <div className={`${bar} h-4 w-20`} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function DocStatus({ state }) {

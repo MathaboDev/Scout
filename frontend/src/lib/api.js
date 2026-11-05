@@ -104,6 +104,10 @@ export const api = {
   register: (form) => request("/api/accounts/register/", { method: "POST", body: form }),
   login: ({ email, password }) =>
     request("/api/accounts/login/", { method: "POST", body: { email, password } }),
+  verifyOtp: ({ otp_id, otp_code }) =>
+    request("/api/accounts/verify-otp/", { method: "POST", body: { otp_id, otp_code } }),
+  resendOtp: ({ otp_id, resend_token }) =>
+    request("/api/accounts/resend-otp/", { method: "POST", body: { otp_id, resend_token } }),
   logout: () => request("/api/accounts/logout/", { method: "POST" }),
   me: () => request("/api/accounts/me/"),
   getProfile: () => request("/api/accounts/profile/"),
@@ -146,6 +150,11 @@ export const api = {
   notifications: () => request("/api/notifications/"),
   markNotificationRead: (id) => request(`/api/notifications/${id}/read/`, { method: "POST" }),
   markAllNotificationsRead: () => request("/api/notifications/read-all/", { method: "POST" }),
+
+  // ---------- admin (FR9) ----------
+  adminPendingListings: () => request("/api/providers-admin/listings/pending/"),
+  adminVerifyListing: (opportunityId) =>
+    request(`/api/providers-admin/listings/${opportunityId}/verify/`, { method: "POST" }),
 
   // ---------- provider (FR10) ----------
   providerListings: () => request("/api/opportunities/provider/listings/"),

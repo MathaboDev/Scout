@@ -263,12 +263,16 @@ LOGGING = {
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 
-# 4. Email. For the demo, the console backend prints every email to the
-#    runserver terminal, so you can show the FR4 link without SMTP.
-#    For real email, set EMAIL_BACKEND to smtp and the EMAIL_* vars in .env.
+# 4. Email — SMTP for real OTP delivery; falls back to console only when
+#    EMAIL_BACKEND is explicitly set to the console backend in .env.
 EMAIL_BACKEND = os.environ.get(
-    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+    "EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
 )
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", default=True)
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Scout <no-reply@scout.local>")
 
 # 5. CORS: let the Vite dev server call the API.

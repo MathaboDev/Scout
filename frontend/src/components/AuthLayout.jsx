@@ -21,7 +21,10 @@ export default function AuthLayout({ current, headline, blurb, tag, title, subti
       </aside>
 
       <main className="relative -mt-8 flex justify-center px-4 pb-12 lg:mt-0 lg:items-center lg:px-12 lg:py-28">
-        <div className="w-full max-w-[460px] rounded-2xl bg-[#F8F8F8] p-7 text-ink sm:p-10">
+        <div
+          key={title || tag}
+          className="w-full max-w-[460px] rounded-2xl bg-[#F8F8F8] p-7 text-ink sm:p-10 anim-fade-up"
+        >
           {tag && <SectionTag light>{tag}</SectionTag>}
           {title && <h2 className="mt-5 text-3xl font-medium tracking-tight">{title}</h2>}
           {subtitle && <p className="mb-7 mt-2 text-sm leading-relaxed text-muted">{subtitle}</p>}

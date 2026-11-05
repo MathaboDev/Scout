@@ -80,3 +80,140 @@
     transform: translateX(0);
   }
 }
+
+/* -----------------------------------------------------------------
+   Reusable, subtle entrance animations. Short durations (160-320ms),
+   gentle ease-out — not showy. Disabled automatically for users with
+   prefers-reduced-motion thanks to the global rule above.
+   ----------------------------------------------------------------- */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideOver {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@layer utilities {
+  .anim-fade        { animation: fadeIn 200ms ease-out both; }
+  .anim-fade-up     { animation: fadeUp 240ms ease-out both; }
+  .anim-fade-scale  { animation: fadeInScale 220ms ease-out both; }
+  .anim-slide-over  { animation: slideOver 180ms ease-out both; }
+
+  /* Stagger helpers for lists — apply anim-fade-up with one of these. */
+  .anim-delay-1  { animation-delay: 40ms; }
+  .anim-delay-2  { animation-delay: 80ms; }
+  .anim-delay-3  { animation-delay: 120ms; }
+  .anim-delay-4  { animation-delay: 160ms; }
+  .anim-delay-5  { animation-delay: 200ms; }
+  .anim-delay-6  { animation-delay: 240ms; }
+
+  /* Scroll-triggered reveal: elements start hidden and transition up/into
+     view when `in-view` is added by useReveal (IntersectionObserver).
+     Entirely CSS, so prefers-reduced-motion still disables it. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 600ms ease-out, transform 600ms ease-out;
+    will-change: opacity, transform;
+  }
+  .reveal.in-view {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .reveal-delay-1 { transition-delay: 60ms; }
+  .reveal-delay-2 { transition-delay: 120ms; }
+  .reveal-delay-3 { transition-delay: 180ms; }
+  .reveal-delay-4 { transition-delay: 240ms; }
+
+  /* Card hover lift — reused by feature + step cards on the landing page. */
+  .card-lift {
+    transition: transform 280ms ease-out, box-shadow 280ms ease-out, border-color 280ms ease-out;
+  }
+  .card-lift:hover {
+    transform: translateY(-4px);
+  }
+
+  /* -----------------------------------------------------------------
+     Tile collage: each tile starts offscreen at (--tile-dx, --tile-dy)
+     with a slight scale/rotate, then flies to its final grid cell when
+     the section scrolls into view. Stagger via --tile-delay.
+     Uses a mild overshoot ease so tiles feel like they land, not drift.
+     The second transition in `.tile.in-view:hover` is a shorter one with
+     no delay so the hover micro-interaction isn't gated by the entry stagger.
+     ----------------------------------------------------------------- */
+  .tile {
+    opacity: 0;
+    transform:
+      translate3d(var(--tile-dx, 0), var(--tile-dy, 0), 0)
+      rotate(var(--tile-rot, 0deg))
+      scale(var(--tile-scale, 0.9));
+    transition:
+      opacity 500ms ease-out,
+      transform 900ms cubic-bezier(0.2, 0.75, 0.25, 1.05),
+      box-shadow 300ms ease-out;
+    transition-delay: var(--tile-delay, 0ms);
+    will-change: transform, opacity;
+  }
+  .tile.in-view {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  .tile.in-view:hover {
+    transition:
+      transform 260ms ease-out,
+      box-shadow 260ms ease-out;
+    transition-delay: 0ms;
+  }
+}
+
+/* -----------------------------------------------------------------
+   Hero-badge gentle float. Keeps the badge subtly alive without
+   distracting from the headline. Disabled by prefers-reduced-motion.
+   ----------------------------------------------------------------- */
+@keyframes heroFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+.hero-badge {
+  animation: fadeUp 240ms ease-out both, heroFloat 4.5s ease-in-out 800ms infinite;
+}
+
+/* -----------------------------------------------------------------
+   Animated gradient fill for a single headline word (<span class="text-shine">).
+   Paints the glyph with a moving brand-palette gradient, so the hero
+   headline has one lively word.
+   ----------------------------------------------------------------- */
+@keyframes shineSlide {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.text-shine {
+  background: linear-gradient(
+    90deg,
+    #F26B4F,
+    #F6E36A,
+    #8CC4EC,
+    #EE8FB0,
+    #F26B4F
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+          color: transparent;
+  animation: shineSlide 6s linear infinite;
+}

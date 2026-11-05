@@ -8,6 +8,7 @@ import { Mark } from "./Logo.jsx";
 // over the dark sections. `scrolled` is React state that the scroll
 // listener updates.
 const LINKS = [
+  { label: "About", href: "#about" },
   { label: "How it works", href: "#how" },
   { label: "Privacy", href: "#privacy" },
 ];

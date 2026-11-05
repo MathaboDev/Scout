@@ -1,38 +1,39 @@
-import { BellRing, Compass, Eye, FileCheck2, Lock, ScanSearch, Send, Trash2, UserRound } from "lucide-react";
+import {
+  BellRing,
+  CheckCircle2,
+  Compass,
+  Eye,
+  FileCheck2,
+  FileText,
+  Lock,
+  Send,
+  Sparkles,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
-import { CtaPair, FluidGradient, SectionTag } from "../components/landing.jsx";
+import {
+  CtaPair,
+  FluidGradient,
+  ScrollProgress,
+  SectionTag,
+  TileCollage,
+} from "../components/landing.jsx";
+import { Reveal } from "../lib/useReveal.js";
 
-// Public landing page. Sections, top to bottom:
-//   hero (fluid gradient) -> our offer -> three feature panels ->
-//   how it works (three steps) -> data & POPIA -> call to action -> footer
-// The only "functionality" here is links: /register, /login and the
-// #how / #privacy anchors used by the navbar.
-
-const FEATURES = [
-  {
-    icon: ScanSearch,
-    name: "Eligibility matching",
-    desc: "Every listing is checked against your field, average, year and province before it reaches your feed.",
-  },
-  {
-    icon: FileCheck2,
-    name: "Assisted apply",
-    desc: "Your profile pre-fills the form. You review every field before anything is sent.",
-  },
-  {
-    icon: BellRing,
-    name: "Live tracking",
-    desc: "Status changes land on your watchlist, plus a nudge three days before a saved listing closes.",
-  },
+// Six touchpoints the student actually experiences, pictured in the About
+// tile grid. The icons & labels pair by index with COLLAGE_TILES positions
+// in components/landing.jsx.
+const COLLAGE_LABELS = [
+  "Profile set up",
+  "Documents attached",
+  "Matched to you",
+  "Review before submit",
+  "Status tracked live",
+  "Outcome received",
 ];
-
-// panel backgrounds, left to right (first one light, like the reference)
-const PANEL_STYLES = [
-  "bg-[#F8F8F8] text-ink",
-  "bg-[#1F1F1F] text-white",
-  "bg-[#171717] text-white",
-];
+const COLLAGE_ICONS = [UserRound, FileText, Sparkles, FileCheck2, BellRing, CheckCircle2];
 
 const STEPS = [
   {
@@ -50,7 +51,7 @@ const STEPS = [
   {
     icon: Send,
     tag: "Apply",
-    title: "Apply, then forget the tab",
+    title: "Apply, then track it live",
     desc: "Confirm the pre-filled review screen, get a reference number, and let your watchlist chase the outcome.",
   },
 ];
@@ -75,148 +76,177 @@ const PRIVACY_POINTS = [
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
+    <div className="min-h-screen overflow-x-hidden bg-[#0A0A0A] text-white">
+      <ScrollProgress />
       <Navbar />
 
       {/* ---------- HERO ---------- */}
       <section className="relative flex min-h-[100svh] flex-col overflow-hidden rounded-b-[28px]">
         <FluidGradient />
         <div className="relative flex flex-1 flex-col justify-between px-6 pb-10 pt-36 sm:px-8 md:px-10 md:pb-12 md:pt-[22vh]">
-          <h1 className="max-w-[15ch] text-[clamp(3rem,7.4vw,7rem)] font-medium leading-[1.02] tracking-[-0.025em]">
-            We find what fits for you.
+          <h1 className="max-w-[15ch] text-[clamp(3rem,7.4vw,7rem)] font-medium leading-[1.02] tracking-[-0.025em] anim-fade-up">
+            We find what <span className="text-shine">fits</span> for you.
           </h1>
           <div className="mt-16 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-            <p className="max-w-[34rem] text-lg leading-snug text-white/90 md:text-[22px]">
-              The one-profile platform for South African students to find, apply for and track
-              internships, learnerships and graduate programmes faster than ever.
+            <p className="max-w-[34rem] text-lg leading-snug text-white/90 md:text-[22px] anim-fade-up anim-delay-4">
+              The one-profile platform for South African students to find, apply for and
+              track internships, learnerships and graduate programmes faster than ever.
             </p>
-            <CtaPair label="Create your profile" to="/register" />
+            <div className="anim-fade-up anim-delay-5">
+              <CtaPair label="Create your profile" to="/register" />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ---------- OUR OFFER ---------- */}
-      <section className="grid gap-10 px-6 py-24 sm:px-8 md:grid-cols-[1fr_1.25fr] md:px-10 md:py-32">
-        <div className="md:sticky md:top-28 md:self-start">
-          <SectionTag>Our offer</SectionTag>
-        </div>
-        <div>
-          <h2 className="text-[clamp(2.25rem,4.4vw,4rem)] font-medium leading-[1.08] tracking-[-0.02em]">
-            Everything you need to get hired, that actually moves{" "}
-            <span className="text-white/40">your career forward.</span>
-          </h2>
-          <p className="mt-10 max-w-[30rem] text-[17px] leading-relaxed text-white/60">
-            Scout replaces the patchwork of company portals, re-typed forms and inbox refreshing with
-            a single profile where every application flows from match to outcome. Matching hides what
-            you don't qualify for, assisted apply pre-fills every form, and live tracking tells you the
-            moment a provider updates your status.
-          </p>
-          <div className="mt-10">
-            <CtaPair label="Discover how it works" href="#how" />
+      {/* ---------- ABOUT ---------- */}
+      <section id="about" className="scroll-mt-20 px-6 py-28 sm:px-8 md:px-10 md:py-36">
+        <div className="mx-auto grid max-w-7xl gap-14 md:grid-cols-[1fr_1.15fr] md:items-center md:gap-16">
+          <div>
+            <Reveal>
+              <SectionTag>About Scout</SectionTag>
+            </Reveal>
+            <Reveal
+              as="h2"
+              delay={1}
+              className="mt-6 text-[clamp(2.25rem,4.4vw,4rem)] font-medium leading-[1.06] tracking-[-0.025em]"
+            >
+              One profile.{" "}
+              <span className="text-white/40">Every opportunity.</span>
+            </Reveal>
+            <Reveal
+              as="p"
+              delay={2}
+              className="mt-7 max-w-md text-[17px] leading-relaxed text-white/60"
+            >
+              Scout replaces the patchwork of company portals, re-typed forms and inbox
+              refreshing with a single place where every application flows from match to
+              outcome. Six moments. One continuous rhythm.
+            </Reveal>
+            <Reveal delay={3} className="mt-10">
+              <CtaPair label="Get started" to="/register" />
+            </Reveal>
           </div>
-        </div>
-      </section>
 
-      {/* ---------- FEATURE PANELS ---------- */}
-      <section className="grid md:grid-cols-3">
-        {FEATURES.map((f, i) => (
-          <article
-            key={f.name}
-            className={`flex min-h-[340px] flex-col justify-between p-10 md:min-h-[380px] md:p-12 ${PANEL_STYLES[i]}`}
-          >
-            <div className="flex items-start justify-between">
-              <f.icon size={58} strokeWidth={1.1} />
-              <span className="text-[11px] tracking-[0.2em] opacity-60">0{i + 1}.</span>
-            </div>
-            <div>
-              <h3 className="text-[26px] font-medium tracking-tight">{f.name}</h3>
-              <p className="mt-3 max-w-[24rem] text-[15px] leading-relaxed opacity-70">{f.desc}</p>
-            </div>
-          </article>
-        ))}
+          <TileCollage labels={COLLAGE_LABELS} icons={COLLAGE_ICONS} />
+        </div>
       </section>
 
       {/* ---------- HOW IT WORKS ---------- */}
-      <section id="how" className="scroll-mt-20 px-6 py-24 sm:px-8 md:px-10 md:py-32">
-        <div className="grid gap-10 md:grid-cols-[1fr_1.25fr]">
-          <div className="md:sticky md:top-28 md:self-start">
-            <SectionTag>How it works</SectionTag>
-          </div>
-          <div>
-            <h2 className="text-[clamp(2.25rem,4.4vw,4rem)] font-medium leading-[1.08] tracking-[-0.02em]">
-              Scout is built on three simple steps.
-            </h2>
-            <p className="mt-8 max-w-[34rem] text-xl font-light leading-relaxed text-white/60">
-              Each one carries part of the journey, turning the frustrating effort of hunting for jobs into a
-              single, continuous motion.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-20 grid gap-4 md:grid-cols-3">
-          {STEPS.map((s, i) => {
-            const light = i === 0;
-            return (
-              <article
-                key={s.title}
-                className={`flex min-h-[360px] flex-col justify-between rounded-2xl p-8 ${
-                  light ? "bg-[#F8F8F8] text-ink" : "bg-[#141414] text-white"
-                }`}
+      <section id="how" className="scroll-mt-20 border-t border-white/5 px-6 py-24 sm:px-8 md:px-10 md:py-32">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-10 md:grid-cols-[1fr_1.25fr]">
+            <Reveal className="md:sticky md:top-28 md:self-start">
+              <SectionTag>How it works</SectionTag>
+            </Reveal>
+            <div>
+              <Reveal
+                as="h2"
+                className="text-[clamp(2.25rem,4.4vw,4rem)] font-medium leading-[1.08] tracking-[-0.02em]"
               >
-                <span
-                  className={`flex h-10 w-10 items-center justify-center rounded-md ${
-                    light ? "bg-black/[0.08]" : "bg-white/[0.08]"
+                Three simple steps.
+              </Reveal>
+              <Reveal
+                as="p"
+                delay={1}
+                className="mt-8 max-w-[34rem] text-xl font-light leading-relaxed text-white/60"
+              >
+                Each one carries part of the journey, turning the frustrating effort of hunting
+                for jobs into a single, continuous motion.
+              </Reveal>
+            </div>
+          </div>
+
+          <div className="mt-20 grid gap-4 md:grid-cols-3">
+            {STEPS.map((s, i) => {
+              const light = i === 0;
+              return (
+                <Reveal
+                  key={s.title}
+                  as="article"
+                  delay={Math.min(i + 1, 4)}
+                  className={`group card-lift flex min-h-[360px] flex-col justify-between rounded-2xl p-8 hover:shadow-[0_18px_50px_-18px_rgba(0,0,0,0.45)] ${
+                    light ? "bg-[#F8F8F8] text-ink" : "bg-[#141414] text-white"
                   }`}
                 >
-                  <s.icon size={19} strokeWidth={1.6} />
-                </span>
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.2em] opacity-50">
-                    0{i + 1} — {s.tag}
-                  </p>
-                  <h3 className="mt-3 text-[26px] font-medium tracking-tight">{s.title}</h3>
-                  <p className="mt-3 text-[15px] leading-relaxed opacity-60">{s.desc}</p>
-                </div>
-              </article>
-            );
-          })}
+                  <span
+                    className={`flex h-10 w-10 items-center justify-center rounded-md transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110 ${
+                      light ? "bg-black/[0.08]" : "bg-white/[0.08]"
+                    }`}
+                  >
+                    <s.icon size={19} strokeWidth={1.6} />
+                  </span>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.2em] opacity-50">
+                      0{i + 1} · {s.tag}
+                    </p>
+                    <h3 className="mt-3 text-[26px] font-medium tracking-tight">{s.title}</h3>
+                    <p className="mt-3 text-[15px] leading-relaxed opacity-60">{s.desc}</p>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
         </div>
       </section>
 
       {/* ---------- DATA & POPIA ---------- */}
-      <section id="privacy" className="scroll-mt-20 px-6 pb-24 sm:px-8 md:px-10 md:pb-32">
-        <div className="grid gap-10 md:grid-cols-[1fr_1.25fr]">
-          <div className="md:sticky md:top-28 md:self-start">
-            <SectionTag>Data &amp; POPIA</SectionTag>
+      <section id="privacy" className="scroll-mt-20 border-t border-white/5 px-6 py-24 sm:px-8 md:px-10 md:py-32">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-10 md:grid-cols-[1fr_1.25fr]">
+            <Reveal className="md:sticky md:top-28 md:self-start">
+              <SectionTag>Data &amp; POPIA</SectionTag>
+            </Reveal>
+            <Reveal
+              as="h2"
+              className="text-[clamp(2.25rem,4.4vw,4rem)] font-medium leading-[1.08] tracking-[-0.02em]"
+            >
+              Your profile only ever holds what an{" "}
+              <span className="text-white/40">application needs.</span>
+            </Reveal>
           </div>
-          <h2 className="text-[clamp(2.25rem,4.4vw,4rem)] font-medium leading-[1.08] tracking-[-0.02em]">
-            Your profile only ever holds what an <span className="text-white/40">application needs.</span>
-          </h2>
-        </div>
-        <div className="mt-16 grid gap-4 md:grid-cols-3">
-          {PRIVACY_POINTS.map((p) => (
-            <div key={p.title} className="rounded-2xl border border-white/10 p-8">
-              <p.icon size={22} strokeWidth={1.5} className="text-white/80" />
-              <h3 className="mt-10 text-xl font-medium">{p.title}</h3>
-              <p className="mt-2 text-[15px] leading-relaxed text-white/55">{p.desc}</p>
-            </div>
-          ))}
+          <div className="mt-16 grid gap-4 md:grid-cols-3">
+            {PRIVACY_POINTS.map((p, i) => (
+              <Reveal
+                key={p.title}
+                delay={Math.min(i + 1, 4)}
+                className="group card-lift rounded-2xl border border-white/10 p-8 hover:border-white/25 hover:bg-white/[0.02]"
+              >
+                <p.icon
+                  size={22}
+                  strokeWidth={1.5}
+                  className="text-white/80 transition-transform duration-300 ease-out group-hover:-translate-y-0.5 group-hover:text-white"
+                />
+                <h3 className="mt-10 text-xl font-medium">{p.title}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-white/55">{p.desc}</p>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* ---------- CALL TO ACTION ---------- */}
       <section className="px-4 pb-16 sm:px-6 md:px-10">
-        <div className="relative flex min-h-[520px] flex-col justify-between overflow-hidden rounded-3xl p-8 sm:p-12 md:px-14 md:py-16">
+        <div className="relative flex min-h-[460px] flex-col justify-between overflow-hidden rounded-3xl p-8 sm:p-12 md:px-14 md:py-16">
           <FluidGradient />
-          <h2 className="relative max-w-[14ch] text-[clamp(2.75rem,5.6vw,5.25rem)] font-medium leading-[1.04] tracking-[-0.025em]">
+          <Reveal
+            as="h2"
+            className="relative max-w-[14ch] text-[clamp(2.75rem,5.6vw,5.25rem)] font-medium leading-[1.04] tracking-[-0.025em]"
+          >
             Upload once, apply everywhere.
-          </h2>
-          <div className="relative mt-16 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-            <p className="max-w-[30rem] text-lg font-light leading-snug text-white/90 md:text-[26px]">
-              Set up your profile in minutes. Your documents are reused for every application, no
-              re-typing, no friction.
-            </p>
-            <CtaPair label="Get started" to="/register" />
+          </Reveal>
+          <div className="relative mt-14 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+            <Reveal
+              as="p"
+              delay={1}
+              className="max-w-[30rem] text-lg font-light leading-snug text-white/90 md:text-[24px]"
+            >
+              Set up your profile in minutes. Your documents are reused for every
+              application. No re-typing, no friction.
+            </Reveal>
+            <Reveal delay={2}>
+              <CtaPair label="Start now" to="/register" />
+            </Reveal>
           </div>
         </div>
       </section>

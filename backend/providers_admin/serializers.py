@@ -1,15 +1,17 @@
 from rest_framework import serializers
+
 from opportunities.models import Opportunity
+from .models import Provider
 
 
-class OpportunityWriteSerializer(serializers.ModelSerializer):
+class AdminListingSerializer(serializers.ModelSerializer):
     """
-    Used by the provider dashboard to create and edit listings.
-    provider_id is deliberately absent from fields: the view sets it from
-    the authenticated provider, never accepted from the request body.
-    is_verified is also absent -- only an admin action should flip that,
-    not the provider who posted the listing.
+    Read-only listing details for the admin verification queue.
+    Includes provider identity so the admin knows who posted the listing.
     """
+
+    provider_name = serializers.SerializerMethodField()
+    provider_email = serializers.SerializerMethodField()
 
     class Meta:
         model = Opportunity
@@ -25,25 +27,22 @@ class OpportunityWriteSerializer(serializers.ModelSerializer):
             "eligibility_type",
             "province",
             "closing_date",
-            "is_active",
-        ]
-        read_only_fields = ["opportunity_id"]
-
-
-class ProviderOpportunitySerializer(serializers.ModelSerializer):
-    """Used for the provider's own listing list (dashboard), includes applicant_count."""
-
-    applicant_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = Opportunity
-        fields = [
-            "opportunity_id",
-            "title",
-            "opportunity_type",
-            "closing_date",
-            "is_verified",
-            "is_active",
-            "applicant_count",
+            "posted_at",
+            "provider_name",
+            "provider_email",
         ]
         read_only_fields = fields
+
+    def _provider(self, obj):
+        # Cached so the two SerializerMethodFields share one query per row.
+        if not hasattr(obj, "_admin_provider_cache"):
+            obj._admin_provider_cache = Provider.objects.filter(provider_id=obj.provider_id).first()
+        return obj._admin_provider_cache
+
+    def get_provider_name(self, obj):
+        provider = self._provider(obj)
+        return provider.company_name if provider else "Unknown provider"
+
+    def get_provider_email(self, obj):
+        provider = self._provider(obj)
+        return provider.email if provider else ""

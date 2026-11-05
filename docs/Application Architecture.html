@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scout — Application Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7f8fa; --surface:#ffffff; --border:#e3e6eb;
+    --text-1:#12151c; --text-2:#4b5262; --accent:#6f61e0;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text-1); font-family:'Inter',system-ui,sans-serif;}
+  .page{max-width:1280px; margin:0 auto; padding:56px 40px 80px;}
+  .eyebrow{font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; letter-spacing:.08em; color:var(--accent); text-transform:uppercase; margin-bottom:10px;}
+  h1{font-size:32px; font-weight:700; margin:0 0 8px; letter-spacing:-0.02em;}
+  .subtitle{font-size:16px; color:var(--text-2); margin:0 0 32px; max-width:760px; line-height:1.55;}
+  h2{font-size:20px; font-weight:600; margin:40px 0 12px; letter-spacing:-0.01em;}
+  .diagram{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px; box-shadow:var(--shadow-sm); overflow:auto;}
+  .diagram pre{margin:0;}
+  .block{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px; box-shadow:var(--shadow-sm);}
+  table{width:100%; border-collapse:collapse; font-size:14px;}
+  th, td{padding:12px 14px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top;}
+  th{color:var(--text-2); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.05em;}
+  ul{margin:0; padding-left:20px; color:var(--text-2); font-size:14px; line-height:1.7;}
+  code{font-family:'JetBrains Mono',monospace; font-size:0.9em; background:#f1f3f6; padding:1px 5px; border-radius:4px; color:#3f3597;}
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="eyebrow">Scout documentation</p>
+  <h1>Application Architecture</h1>
+  <p class="subtitle">A three-tier architecture: a React/Vite single-page frontend, a Django REST Framework backend, and a Supabase-hosted PostgreSQL database. External services (Brevo SMTP, Supabase Storage) are isolated behind backend-only adapters so the frontend never talks to them directly.</p>
+
+  <div class="diagram">
+    <pre class="mermaid">
+flowchart LR
+    subgraph Users[Users]
+        direction TB
+        S_User(["Student"])
+        P_User(["Provider"])
+        A_User(["Administrator"])
+    end
+
+    subgraph Frontend[Frontend · React + Vite]
+        direction TB
+        Pages[Pages<br/>Login · Register · Eligible · Profile<br/>Apply · Dashboard · AdminVerify]
+        Shared[Shared<br/>AuthContext · AuthLayout · AppShell · ProviderShell]
+        ApiJS[lib/api.js<br/>fetch + Token header]
+    end
+
+    subgraph Backend[Backend · Django + DRF]
+        direction TB
+        URLs[URL router<br/>/api/accounts/*<br/>/api/opportunities/*<br/>/api/applications/*<br/>/api/documents/*<br/>/api/notifications/*<br/>/api/providers-admin/*]
+        Perms[core.permissions<br/>IsStudent · IsProvider · IsAdmin]
+        Views[Views<br/>register · login · verify_otp · resend_otp<br/>provider_listings · applicants · outcomes<br/>pending_listings · verify_listing]
+        OTP[accounts.otp_utils<br/>hash · verify · rate-limit]
+        Storage[documents.supabase_storage<br/>upload · signed URL]
+        Mail[django.core.mail<br/>SMTP backend]
+    end
+
+    subgraph Data[Data and external services]
+        direction TB
+        DB[(Supabase PostgreSQL<br/>auth_user · student · provider · admin<br/>profile · opportunity · application<br/>bookmark · notification · login_otp)]
+        Bucket[(Supabase Storage<br/>documents bucket)]
+        SMTP[(Brevo SMTP<br/>smtp-relay.brevo.com:587)]
+    end
+
+    S_User --> Pages
+    P_User --> Pages
+    A_User --> Pages
+    Pages --> Shared
+    Shared --> ApiJS
+    ApiJS -- "HTTPS + Token" --> URLs
+    URLs --> Perms --> Views
+    Views --> OTP
+    Views --> Storage
+    Views --> Mail
+    Views -- "ORM / managed=False" --> DB
+    OTP --> DB
+    Storage -- "signed-URL upload" --> Bucket
+    Mail -- "SMTP 587 STARTTLS" --> SMTP
+
+    classDef user fill:#fef8ec,stroke:#d97706,color:#8a4c0a;
+    classDef fe fill:#eef4fd,stroke:#2563eb,color:#1e3a6f;
+    classDef be fill:#eefaf6,stroke:#0d9488,color:#0f5f52;
+    classDef data fill:#f3f1fd,stroke:#6f61e0,color:#3f3597;
+    class S_User,P_User,A_User user;
+    class Pages,Shared,ApiJS fe;
+    class URLs,Perms,Views,OTP,Storage,Mail be;
+    class DB,Bucket,SMTP data;
+    </pre>
+  </div>
+
+  <h2>Layer responsibilities</h2>
+  <div class="block">
+    <table>
+      <thead>
+        <tr><th>Layer</th><th>Owns</th><th>Does not own</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Frontend</strong></td>
+          <td>Rendering, client-side validation, routing, token storage</td>
+          <td>Role decisions, OTP logic, business rules</td>
+        </tr>
+        <tr>
+          <td><strong>Backend</strong></td>
+          <td>Authentication, authorization, OTP issuance/verification, business rules, serialization, rate-limiting, email composition</td>
+          <td>Document storage internals, SMTP delivery mechanics</td>
+        </tr>
+        <tr>
+          <td><strong>Data & external</strong></td>
+          <td>Durable storage, password hashing (<code>auth_user</code>), file hosting, email transport</td>
+          <td>Business rules</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>External service boundaries</h2>
+  <div class="block">
+    <ul>
+      <li><strong>Brevo SMTP</strong> is reached through <code>django.core.mail</code> using environment-configured credentials (<code>EMAIL_HOST</code>, <code>EMAIL_HOST_USER</code>, <code>EMAIL_HOST_PASSWORD</code>). OTP codes are composed server-side and never exposed to the frontend. Switching providers is a <code>.env</code> change.</li>
+      <li><strong>Supabase Storage</strong> is reached through <code>documents.supabase_storage</code> using the service-role key held only on the server. The frontend receives signed URLs, never the key.</li>
+      <li><strong>Supabase PostgreSQL</strong> is accessed via the standard Django ORM. Scout's schema is hand-written in <code>database/schema.sql</code>; every model that maps to it declares <code>managed = False</code>. Django owns its own <code>auth_user</code>, <code>authtoken_token</code>, <code>django_session</code> tables.</li>
+    </ul>
+  </div>
+
+  <h2>Deployment notes</h2>
+  <div class="block">
+    <ul>
+      <li>Frontend builds to static assets (<code>npm run build</code>) and can be served from any CDN or static host.</li>
+      <li>Backend runs as a Django WSGI app; targets a single instance for dev and horizontal scale-out behind a load balancer for production.</li>
+      <li>The database connection uses Supabase's pooled endpoint (<code>aws-1-eu-north-1.pooler.supabase.com:5432</code>) with SSL required.</li>
+    </ul>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+</script>
+</body>
+</html>

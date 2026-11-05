@@ -161,8 +161,13 @@ Stores organisations that post opportunities on SCOUT.
 | `phone` | VARCHAR(20) | Yes |  | Provider contact number |
 | `industry` | VARCHAR(100) | No |  | Industry in which provider operates |
 | `province` | VARCHAR(50) | No |  | Provider's province |
+| `authuserid` | INTEGER | Yes | Unique, FK → `auth_user.id` | Links the SCOUT provider record to Django authentication |
 | `createdat` | TIMESTAMPTZ | No | Default `NOW()` | Provider creation date |
 | `updatedat` | TIMESTAMPTZ | No | Default `NOW()` | Last update |
+
+### Notes
+
+Providers authenticate through Django's `auth_user` table, mirroring the student model. A provider row is created alongside the `auth_user` row during self-registration.
 
 ---
 
@@ -311,10 +316,37 @@ Stores SCOUT administrator accounts.
 
 ---
 
-# 10. Entity Relationships
+# 10. Login OTP
+
+Stores short-lived one-time password challenges used for email verification during signup. A single Django `auth_user` can have many OTP records over time; only the most recent unused one is live.
+
+| Attribute | Data Type | Nullable | Constraint | Description |
+| --- | --- | --- | --- | --- |
+| `id` | BIGINT | No | PK, Unique, Auto-generated | Unique OTP challenge identifier |
+| `user_id` | INTEGER | No | FK → `auth_user.id` | User the challenge belongs to |
+| `code_hash` | VARCHAR(255) | No |  | Salted hash of the six-digit OTP (plaintext never stored) |
+| `resend_token_hash` | VARCHAR(255) | Yes |  | Salted hash of the resend credential; rotates on each resend |
+| `resend_count` | INTEGER | No | Default `0`, `>= 0` | Number of replacement OTPs issued for this challenge |
+| `created_at` | TIMESTAMPTZ | No | Default `NOW()` | When the challenge was created |
+| `expires_at` | TIMESTAMPTZ | No |  | Expiry time (five minutes after creation) |
+| `attempts` | INTEGER | No | Default `0`, `>= 0` | Number of code-entry attempts; the row is locked after 5 |
+| `is_used` | BOOLEAN | No | Default `FALSE` | Whether the OTP has been successfully verified |
+
+## Protection rules
+
+- Plaintext codes and resend tokens are never written to the database.
+- A successfully verified OTP flips `is_used` to `TRUE` and activates the owning `auth_user` (signup verification).
+- Expired, reused and attempt-exhausted challenges are rejected without revealing which failure applied.
+
+---
+
+# 11. Entity Relationships
 
 | Entity | Relates To | Relationship | Cardinality |
 | --- | --- | --- | --- |
+| auth_user | Student | Links Django credentials to a student record | 1:1 (optional) |
+| auth_user | Provider | Links Django credentials to a provider record | 1:1 (optional) |
+| auth_user | LoginOTP | Generates many OTP challenges over time | 1:M |
 | Student | Profile | One student has one profile | 1:1 |
 | Student | Document | One student can have many documents | 1:M |
 | Student | Application | One student can have many applications | 1:M |
@@ -327,4 +359,4 @@ Stores SCOUT administrator accounts.
 | Application | Notification | One application can generate many notifications | 1:M |
 | Bookmark | Notification | One bookmark can generate reminder notifications | 1:M |
 
-The core relationships are consistent with the original data dictionary's relationship model.
+The `auth_user` relationships are provided by Django's built-in authentication system and are not managed by SCOUT's migration file. All other relationships are enforced in `database/schema.sql`.

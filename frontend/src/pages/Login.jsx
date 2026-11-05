@@ -11,17 +11,19 @@ import { useAuth } from "../context/AuthContext.jsx";
 // Only follow a "from" redirect if it belongs to the role that just logged in.
 function destinationFor(role, from) {
   const providerPath = from?.startsWith("/provider");
+  const adminPath = from?.startsWith("/admin");
+  if (from && role === "admin" && adminPath) return from;
   if (from && role === "provider" && providerPath) return from;
-  if (from && role === "student" && !providerPath) return from;
+  if (from && role === "student" && !providerPath && !adminPath) return from;
   return HOME_FOR_ROLE[role] || "/";
 }
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  // Opened from a "For providers" link (/login?as=provider): same form and
-  // same login, only the wording changes. The role still comes from the server.
-  const asProvider = new URLSearchParams(location.search).get("as") === "provider";
+  const asParam = new URLSearchParams(location.search).get("as");
+  const asProvider = asParam === "provider";
+  const asAdmin = asParam === "admin";
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,16 +49,26 @@ export default function Login() {
   return (
     <AuthLayout
       current="login"
-      headline={asProvider ? "Find the students who fit." : "Good to see you again."}
+      headline={
+        asAdmin
+          ? "Keep the platform honest."
+          : asProvider
+          ? "Find the students who fit."
+          : "Good to see you again."
+      }
       blurb={
-        asProvider
+        asAdmin
+          ? "Review pending provider listings and approve the ones that are ready to go live."
+          : asProvider
           ? "See your listings, review applicants and update their status in one place."
           : "Pick up where you left off: new matches, saved listings and live application statuses."
       }
-      tag={asProvider ? "Provider log in" : "Log in"}
+      tag={asAdmin ? "Admin log in" : asProvider ? "Provider log in" : "Log in"}
       title="Welcome back"
       subtitle={
-        asProvider
+        asAdmin
+          ? "Log in with the administrator account Scout set up for you."
+          : asProvider
           ? "Log in with the company account Scout set up for you."
           : "Students and providers both sign in here."
       }
@@ -104,16 +116,18 @@ export default function Login() {
           {submitting ? "Signing in..." : "Log in"}
         </Button>
 
-        <p className="mt-6 text-center text-[13px] text-muted">
-          Don't have an account?{" "}
-          <button
-            type="button"
-            onClick={() => navigate("/register")}
-            className="font-medium text-ink underline underline-offset-4 hover:no-underline"
-          >
-            Sign up
-          </button>
-        </p>
+        {!asAdmin && (
+          <p className="mt-6 text-center text-[13px] text-muted">
+            Don't have an account?{" "}
+            <button
+              type="button"
+              onClick={() => navigate(asProvider ? "/register?as=provider" : "/register")}
+              className="font-medium text-ink underline underline-offset-4 hover:no-underline"
+            >
+              Sign up
+            </button>
+          </p>
+        )}
       </form>
     </AuthLayout>
   );

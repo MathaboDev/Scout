@@ -23,6 +23,8 @@ import PostListing from "./pages/PostListing.jsx";
 import ViewApplicants from "./pages/ViewApplicants.jsx";
 import ApplicantDetails from "./pages/ApplicantDetails.jsx";
 
+import AdminVerify from "./pages/AdminVerify.jsx";
+
 // Small helpers so each route line stays readable.
 // These are defined at the top level of the file (not inside App), so React
 // never remounts them on re-render.
@@ -32,6 +34,10 @@ function Student({ children }) {
 
 function Provider({ children }) {
   return <RequireAuth role="provider">{children}</RequireAuth>;
+}
+
+function Admin({ children }) {
+  return <RequireAuth role="admin">{children}</RequireAuth>;
 }
 
 export default function App() {
@@ -63,6 +69,9 @@ export default function App() {
             path="/provider/listings/:listingId/applicants/:applicationId"
             element={<Provider><ApplicantDetails /></Provider>}
           />
+
+          {/* Admin (FR9) */}
+          <Route path="/admin/verify" element={<Admin><AdminVerify /></Admin>} />
 
           {/* Anything else goes home */}
           <Route path="*" element={<Navigate to="/" replace />} />

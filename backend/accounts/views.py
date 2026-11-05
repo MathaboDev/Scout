@@ -11,7 +11,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 
-from core.permissions import IsStudent, get_provider, get_student
+from core.permissions import IsStudent, get_admin, get_provider, get_student
+from core.choices import PROVINCES
+
+from providers_admin.models import Provider
 
 from .models import Profile, Student, LoginOTP
 from .serializers import StudentProfileSerializer
@@ -31,17 +34,22 @@ MIN_PASSWORD_LENGTH = 10  # frontend Register.jsx uses the same number
 def _user_payload(user):
     """"
     The one shape the frontend stores after login. `role` decides which
-    side of the app the user lands on: 'student' or 'provider'.
+    side of the app the user lands on: 'student', 'provider', or 'admin'.
+    Admin takes precedence (is_staff users are platform admins first, even
+    if a stale student/provider row happens to share their auth_user).
     """
-    student = get_student(user)
-    provider = None if student else get_provider(user)
+    admin = get_admin(user)
+    student = None if admin else get_student(user)
+    provider = None if admin or student else get_provider(user)
+
+    role = "admin" if admin else "student" if student else "provider" if provider else None
 
     payload = {
         "id": user.id,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "email": user.email,
-        "role": "student" if student else "provider" if provider else None,
+        "role": role,
     }
     if provider:
         payload["company_name"] = provider.company_name
@@ -52,21 +60,25 @@ def _user_payload(user):
 @permission_classes([AllowAny])
 @throttle_classes([AnonRateThrottle])
 def register(request):
-    full_name = (request.data.get("full_name") or "").strip()
+    """
+    Create a Scout account. Defaults to a student account, which keeps every
+    existing frontend call working unchanged. Pass role="provider" to create
+    a provider account with company_name, industry and province.
+    """
+    role = (request.data.get("role") or "student").strip().lower()
+    if role not in ("student", "provider"):
+        return Response(
+            {"error": "Account role must be 'student' or 'provider'."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     email = (request.data.get("email") or "").strip().lower()
     password = request.data.get("password") or ""
     confirm_password = request.data.get("confirm_password") or ""
 
-    if not full_name or not email or not password or not confirm_password:
+    if not email or not password or not confirm_password:
         return Response(
-            {"error": "Full name, email, password and confirm password are all required."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    name_parts = full_name.split()
-    if len(name_parts) < 2:
-        return Response(
-            {"error": "Please enter your first and last name."},
+            {"error": "Email, password and confirm password are all required."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -79,43 +91,123 @@ def register(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    if User.objects.filter(username=email).exists() or Student.objects.filter(email=email).exists():
+    # Any existing account (student OR provider OR auth_user) with this email blocks reuse.
+    if (
+        User.objects.filter(username=email).exists()
+        or Student.objects.filter(email=email).exists()
+        or Provider.objects.filter(email=email).exists()
+    ):
         return Response(
             {"error": "An account with this email already exists. Try logging in instead."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    first_name, last_name = name_parts[0], " ".join(name_parts[1:])
+    if role == "student":
+        full_name = (request.data.get("full_name") or "").strip()
+        if not full_name:
+            return Response(
+                {"error": "Full name is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        name_parts = full_name.split()
+        if len(name_parts) < 2:
+            return Response(
+                {"error": "Please enter your first and last name."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        first_name, last_name = name_parts[0], " ".join(name_parts[1:])
 
+        try:
+            with transaction.atomic():
+                # is_active=False blocks login until the email is verified
+                # via OTP. verify_otp flips it to True on first success.
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    is_active=False,
+                )
+                Student.objects.create(
+                    first_name=first_name,
+                    last_name=last_name,
+                    email=email,
+                    password_hash=None,
+                    is_email_verified=False,
+                    account_status="active",
+                    auth_user=user,
+                )
+                otp_record, otp_code, resend_token = create_login_otp(user)
+        except Exception:
+            return Response(
+                {"error": "We couldn't create your account right now. Please try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    else:
+        # Provider branch.
+        company_name = (request.data.get("company_name") or "").strip()
+        industry = (request.data.get("industry") or "").strip()
+        province = (request.data.get("province") or "").strip()
+        phone = (request.data.get("phone") or "").strip() or None
+
+        if not company_name or not industry or not province:
+            return Response(
+                {"error": "Company name, industry and province are all required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if province not in PROVINCES:
+            return Response(
+                {"error": "Choose a valid South African province."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=password,
+                    first_name=company_name[:30],
+                    last_name="",
+                    is_active=False,
+                )
+                Provider.objects.create(
+                    company_name=company_name,
+                    email=email,
+                    phone=phone,
+                    industry=industry,
+                    province=province,
+                    auth_user=user,
+                )
+                otp_record, otp_code, resend_token = create_login_otp(user)
+        except Exception:
+            return Response(
+                {"error": "We couldn't create your account right now. Please try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    # Deliver the signup verification code. Account stays inactive until
+    # verify_otp succeeds, so a delivery failure is not silently discarded.
     try:
-        with transaction.atomic():
-            user = User.objects.create_user(
-                username=email,
-                email=email,
-                password=password,
-                first_name=first_name,
-                last_name=last_name,
-            )
-            Student.objects.create(
-                first_name=first_name,
-                last_name=last_name,
-                email=email,
-                password_hash=None,
-                is_email_verified=False,
-                account_status="active",
-                auth_user=user,
-            )
+        send_login_otp(user, otp_code)
     except Exception:
-        # NFR1: never echo internal errors (they can contain SQL / data).
+        logger.exception("Failed to send signup OTP email.")
+        otp_record.is_used = True
+        otp_record.save(update_fields=["is_used"])
         return Response(
-            {"error": "We couldn't create your account right now. Please try again."},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            {"error": "Unable to send verification code. Please try again."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
     return Response(
         {
-            "message": "Registration successful.",
-            "user": {"first_name": first_name, "last_name": last_name, "email": email},
+            "message": "Verification code sent to your email.",
+            "otp_id": otp_record.id,
+            "resend_token": resend_token,
+            "requires_verification": True,
         },
         status=status.HTTP_201_CREATED,
     )
@@ -126,89 +218,51 @@ def register(request):
 @throttle_classes([AnonRateThrottle])
 def login(request):
     """
-    Authenticate the user's credentials and initiate email OTP verification.
-    An authentication token is issued only after OTP verification.
+    Authenticate the user's credentials and issue an authentication token.
+
+    Email verification (OTP) happens once at signup, not on every login, so
+    an activated account logs in with email + password alone. authenticate()
+    returns None for is_active=False accounts, which means a user who has
+    not completed signup verification cannot slip past this check.
     """
 
     email = (request.data.get("email") or "").strip().lower()
     password = request.data.get("password") or ""
 
-    # Ensure both login credentials have been provided.
     if not email or not password:
         return Response(
             {"error": "Email and password are required."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Authenticate against Django's existing user credentials.
-    user = authenticate(
-        request=request,
-        username=email,
-        password=password
-    )
+    user = authenticate(request=request, username=email, password=password)
 
     if user is None:
+        # Could be: wrong password, no such account, or an unverified account.
+        # If an inactive account matches the password, redirect the user to
+        # finish signup verification instead of showing a generic error.
+        pending = User.objects.filter(username=email, is_active=False).first()
+        if pending and pending.check_password(password):
+            return Response(
+                {"error": "Please verify your email first. Check your inbox for the signup code."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         return Response(
             {"error": "Invalid email or password."},
-            status=status.HTTP_401_UNAUTHORIZED
+            status=status.HTTP_401_UNAUTHORIZED,
         )
 
-    # Only registered Scout students and providers may continue.
     payload = _user_payload(user)
-
     if payload["role"] is None:
         return Response(
             {"error": "User account is not linked to a Scout role."},
-            status=status.HTTP_403_FORBIDDEN
+            status=status.HTTP_403_FORBIDDEN,
         )
 
-    # Lock the user's database row so simultaneous login requests
-    # cannot generate multiple OTP challenges during the cooldown.
-    with transaction.atomic():
-        User.objects.select_for_update().get(pk=user.pk)
-
-        if not can_request_login_otp(user):
-            return Response(
-                {
-                    "error": (
-                        "Please wait 60 seconds before requesting "
-                        "another verification code."
-                    )
-                },
-                status=status.HTTP_429_TOO_MANY_REQUESTS
-            )
-
-        # Generate the OTP and its separate secure resend credential.
-        otp_record, otp_code, resend_token = create_login_otp(user)
-
-    try:
-        send_login_otp(user, otp_code)
-    except Exception:
-        # Record the actual email delivery error for backend debugging.
-        logger.exception("Failed to send login OTP email.")
-
-        # Invalidate the OTP challenge when sending fails.
-        otp_record.is_used = True
-        otp_record.save(update_fields=["is_used"])
-
-        return Response(
-            {"error": "Unable to send verification code. Please try again."},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE
-    )
-
-    # Return the challenge ID, not the authentication token.
+    token, _ = Token.objects.get_or_create(user=user)
     return Response(
-        {
-            "message": "Verification code sent to your email.",
-            "otp_id": otp_record.id,
-
-            # The frontend must keep this credential private.
-            # It will be required when requesting another OTP.
-            "resend_token": resend_token,
-
-            "requires_otp": True
-        },
-        status=status.HTTP_200_OK
+        {"message": "Login successful.", "token": token.key, "user": payload},
+        status=status.HTTP_200_OK,
     )
 
 @api_view(["POST"])
@@ -257,16 +311,27 @@ def verify_otp(request):
             )
 
         user = otp_record.user
+
+        # First successful OTP activates the account (signup verification).
+        # Idempotent for any future OTP use on an already-active account.
+        if not user.is_active:
+            user.is_active = True
+            user.save(update_fields=["is_active"])
+
+        # Mirror activation on the Student row so is_email_verified reflects
+        # reality. Provider has no equivalent field.
+        Student.objects.filter(auth_user=user, is_email_verified=False).update(
+            is_email_verified=True
+        )
+
         payload = _user_payload(user)
 
-        # Confirm the account is still active and has a valid Scout role.
-        if not user.is_active or payload["role"] is None:
+        if payload["role"] is None:
             return Response(
                 {"error": "This account cannot log in."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # Only issue the authentication token after OTP verification.
         token, _ = Token.objects.get_or_create(user=user)
 
     return Response(
@@ -321,12 +386,13 @@ def resend_otp(request):
         # requests cannot act on stale challenge information.
         original.refresh_from_db()
 
-        # Reject challenges that are already used, exhausted,
-        # or belong to inactive accounts.
+        # Reject challenges that are already used or exhausted.
+        # Inactive accounts are allowed here because signup verification
+        # itself happens on an inactive account — users need to be able
+        # to resend the activation code if the first email was missed.
         if (
             original.is_used
             or original.attempts >= MAX_OTP_ATTEMPTS
-            or not user.is_active
             or _user_payload(user)["role"] is None
         ):
             return Response(

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scout — Activity Diagrams</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7f8fa; --surface:#ffffff; --border:#e3e6eb;
+    --text-1:#12151c; --text-2:#4b5262; --accent:#0d9488;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text-1); font-family:'Inter',system-ui,sans-serif;}
+  .page{max-width:1180px; margin:0 auto; padding:56px 40px 80px;}
+  .eyebrow{font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; letter-spacing:.08em; color:var(--accent); text-transform:uppercase; margin-bottom:10px;}
+  h1{font-size:32px; font-weight:700; margin:0 0 8px; letter-spacing:-0.02em;}
+  .subtitle{font-size:16px; color:var(--text-2); margin:0 0 32px; max-width:720px; line-height:1.55;}
+  h2{font-size:20px; font-weight:600; margin:40px 0 6px; letter-spacing:-0.01em;}
+  h2:first-of-type{margin-top:0;}
+  .description{font-size:14px; color:var(--text-2); margin:0 0 16px; line-height:1.6; max-width:720px;}
+  .diagram{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px; box-shadow:var(--shadow-sm); overflow:auto; margin-bottom:16px;}
+  .diagram pre{margin:0;}
+  .legend{display:flex; gap:20px; flex-wrap:wrap; margin-top:12px; font-size:13px; color:var(--text-2);}
+  .legend-item{display:flex; align-items:center; gap:8px;}
+  .swatch{width:12px; height:12px; border-radius:3px; border:1px solid rgba(0,0,0,0.1);}
+  code{font-family:'JetBrains Mono',monospace; font-size:0.9em; background:#f1f3f6; padding:1px 5px; border-radius:4px; color:#0f5f52;}
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="eyebrow">Scout documentation</p>
+  <h1>Activity Diagrams</h1>
+  <p class="subtitle">Two end-to-end workflows: the student's journey from signup to a submitted application, and the opportunity lifecycle from the moment a provider posts it to the moment a student sees an outcome.</p>
+
+  <h2>1. Student application journey</h2>
+  <p class="description">Covers FR1 (register + verify), FR2 (eligibility matching), FR3 (assisted apply) and FR4 (missing document detection).</p>
+  <div class="diagram">
+    <pre class="mermaid">
+flowchart TD
+    Start([Start]) --> Register[Register account]
+    Register --> OTP[Enter OTP from email]
+    OTP -->|invalid| OTP
+    OTP -->|valid| Dash{Profile complete?}
+    Dash -->|no| Profile[Fill professional profile]
+    Profile --> Docs[Upload CV + matric certificate]
+    Docs --> Dash
+    Dash -->|yes| Browse[Browse eligible opportunities]
+    Browse --> Pick[Open an opportunity]
+    Pick --> Apply{Required docs present?}
+    Apply -->|no| MissDoc[Receive missing-document email + upload]
+    MissDoc --> Review
+    Apply -->|yes| Review[Review pre-filled application]
+    Review -->|confirm| Submit[Submit application]
+    Review -->|cancel| Browse
+    Submit --> Receipt[Receive receipt + reference number]
+    Receipt --> Track[Track status on dashboard]
+    Track --> Outcome[Outcome received notification]
+    Outcome --> End([End])
+
+    classDef action fill:#eef4fd,stroke:#2563eb,color:#1e3a6f;
+    classDef decision fill:#fef8ec,stroke:#d97706,color:#8a4c0a;
+    class Register,OTP,Profile,Docs,Browse,Pick,MissDoc,Review,Submit,Receipt,Track,Outcome action;
+    class Dash,Apply decision;
+    </pre>
+  </div>
+
+  <h2>2. Opportunity lifecycle (provider + admin + student)</h2>
+  <p class="description">Covers FR9 (admin verification) and FR10 (provider listing management). Lanes are colour-coded by actor since Mermaid lacks native swim-lanes.</p>
+  <div class="diagram">
+    <pre class="mermaid">
+flowchart TD
+    PStart([Provider posts listing]) --> PCreate[is_verified=FALSE, is_active=TRUE]
+    PCreate --> Queue[Enters admin verification queue]
+    Queue --> ARev{Admin reviews}
+    ARev -->|verify| AV[is_verified=TRUE, admin_id=reviewer]
+    ARev -->|leave for now| Queue
+    AV --> Live{Closing date passed?}
+    Live -->|no| Visible[Visible to students in matching view]
+    Live -->|yes| Hidden[Hidden from student view]
+    Visible --> SApply[Student applies]
+    SApply --> NewApp[application row created]
+    NewApp --> PView[Provider sees applicant in dashboard]
+    PView --> PUpdate{Update outcome?}
+    PUpdate -->|yes| OutcomeSet[status=Outcome Received]
+    OutcomeSet --> SNotify[Student notified via dashboard + email]
+    SNotify --> End([End])
+    PUpdate -->|not yet| PView
+    Hidden --> End
+
+    classDef p fill:#eefaf6,stroke:#0d9488,color:#0f5f52;
+    classDef a fill:#f3f1fd,stroke:#6f61e0,color:#3f3597;
+    classDef s fill:#eef4fd,stroke:#2563eb,color:#1e3a6f;
+    class PStart,PCreate,PView,PUpdate,OutcomeSet p;
+    class Queue,ARev,AV a;
+    class SApply,NewApp,SNotify,Visible,Hidden s;
+    </pre>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><span class="swatch" style="background:#eefaf6;border-color:#0d9488"></span>Provider actions</div>
+    <div class="legend-item"><span class="swatch" style="background:#f3f1fd;border-color:#6f61e0"></span>Admin actions</div>
+    <div class="legend-item"><span class="swatch" style="background:#eef4fd;border-color:#2563eb"></span>Student-facing effects</div>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+</script>
+</body>
+</html>
