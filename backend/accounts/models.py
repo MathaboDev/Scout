@@ -67,3 +67,45 @@ class Profile(models.Model):
     def __str__(self):
         return f"Profile {self.profile_id}"
 
+class LoginOTP(models.Model):
+    """
+    Stores temporary OTP challenges for two-factor authentication.
+    A valid OTP must be verified before an authentication token is issued.
+    """
+
+    # Link each OTP challenge to a Django authentication user.
+    # This supports both student and provider accounts.
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="login_otps"
+    )
+     # Store a protected representation of the OTP, never the plaintext code.
+    code_hash = models.CharField(max_length=255)
+
+    # Store a secure, unpredictable credential for OTP resend requests.
+    # Only its hash is stored, so the original credential cannot be retrieved.
+    resend_token_hash = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
+    )
+
+    # Number of replacement codes issued for this login.
+    resend_count = models.PositiveIntegerField(default=0)
+
+    # Track expiration and prevent expired codes from being accepted.
+    created_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+
+    # Limit incorrect attempts and prevent OTP reuse.
+    attempts = models.PositiveIntegerField(default=0)
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        managed = False
+        db_table = "login_otp"
+
+    def __str__(self):
+        return f"Login OTP for user {self.user_id}"
