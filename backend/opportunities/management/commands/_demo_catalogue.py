@@ -39,6 +39,31 @@ PROVIDERS = [
             # Eligible for the demo student (IT internship, no restrictions)
             listing("Web analytics intern", "Internship", "Information Technology",
                     "Set up tracking and build reports for client websites. Remote-friendly.", 14),
+            # NOT eligible for Mathabo: Gauteng only, she is in the Western Cape
+            listing("Johannesburg IT helpdesk intern", "Internship", "Information Technology",
+                    "Support staff at our Sandton office with laptops, accounts and printers.", 23,
+                    province="Gauteng"),
+            # NOT eligible for Mathabo: needs 4th year, she is in 3rd year
+            listing("Final-year systems developer intern", "Internship", "Information Technology",
+                    "Build internal tools with our platform team. For final-year students.", 27,
+                    eligibility_type="Tertiary Student", year_level_required=4),
+            # IT graduate programmes at every qualification level, for the
+            # Masters demo student (Mathabo Nongwe, 71% average)
+            listing("Junior IT graduate programme", "Graduate programme", "Information Technology",
+                    "A 12-month programme across our support, networks and cloud teams.", 34,
+                    eligibility_type="Graduate", required_qualification="Diploma"),
+            listing("Data platform graduate programme", "Graduate programme", "Information Technology",
+                    "Design and run the data warehouse behind our client dashboards.", 38,
+                    eligibility_type="Graduate", required_qualification="Honours", minimum_average=70),
+            listing("Cybersecurity graduate programme", "Graduate programme", "Information Technology",
+                    "Threat monitoring, incident response and security reviews for clients.", 42,
+                    eligibility_type="Graduate", required_qualification="Masters"),
+            listing("Applied ML graduate programme", "Graduate programme", "Information Technology",
+                    "Build and deploy forecasting models with our data science team.", 46,
+                    eligibility_type="Graduate", required_qualification="Masters", minimum_average=75),
+            listing("AI research fellowship", "Graduate programme", "Information Technology",
+                    "A two-year research post publishing on applied machine learning.", 58,
+                    eligibility_type="Graduate", required_qualification="Doctorate"),
         ],
     },
     {
@@ -181,8 +206,73 @@ PROVIDERS = [
 ]
 
 
+# Demo student for the file-upload and eligibility-matching walkthrough.
+# Profile is complete, but she has NO documents, so applying is blocked
+# until she uploads a CV and matric certificate (FR4).
+#
+# She is a current Diploma in IT student, so she is stored as a
+# "Tertiary Student". The schema only allows `qualification` for
+# graduates (chk_profile_studenttype_fields), so "Diploma" is not stored.
+#
+# Expected result in the "Eligible" view (closing dates permitting):
+#   eligible  : Software developer intern (min 65, year 2+), IT support intern
+#               (Western Cape), Web analytics intern, Health records IT intern,
+#               E-commerce website intern (min 60)
+#   excluded  : Cloud engineering intern (min 80 > 68), Graduate developer
+#               programme (graduates only), Data analyst intern (Computer
+#               Science), IT systems learnership (she wants internships),
+#               Johannesburg IT helpdesk intern (Gauteng only), Final-year
+#               systems developer intern (needs 4th year), UX design intern
+#               (not verified, hidden from everyone)
+MATHABO = {
+    "email": "mathabo@scout.demo",
+    "first_name": "Mathabo",
+    "last_name": "Mabunu",
+    "profile": {
+        "student_type": "Tertiary Student",
+        "year_level": 3,
+        "institution": "Cape Peninsula University of Technology",
+        "field_of_study": "Information Technology",
+        "academic_average": 68,
+        "opportunity_preference": "Internship",
+        "province": "Western Cape",
+    },
+}
+
+# Demo student for the "qualification or higher" rule. A Masters graduate
+# sees graduate listings that ask for a Diploma, Bachelor, Honours or
+# Masters, but not one that asks for a Doctorate. No documents uploaded.
+#
+# Expected IT graduate programmes in her "Eligible" view:
+#   eligible  : Junior IT graduate programme (Diploma), Graduate developer
+#               programme (Bachelor), Data platform graduate programme
+#               (Honours, min 70), Cybersecurity graduate programme (Masters)
+#   excluded  : AI research fellowship (Doctorate > Masters), Applied ML
+#               graduate programme (Masters, but min 75 > 71), every
+#               internship (she wants a graduate programme)
+MATHABO_NONGWE = {
+    "email": "mathabo.nongwe@scout.demo",
+    "first_name": "Mathabo",
+    "last_name": "Nongwe",
+    "profile": {
+        "student_type": "Graduate",
+        "graduate_type": "Postgraduate",
+        "qualification": "Masters",
+        "institution": "University of Cape Town",
+        "field_of_study": "Information Technology",
+        "academic_average": 71,
+        "opportunity_preference": "Graduate programme",
+        "province": "Western Cape",
+    },
+}
+
+# Accounts that `seed_demo --reset-mathabo` puts back to their seeded state.
+RESETTABLE_STUDENTS = [MATHABO, MATHABO_NONGWE]
+
 # Extra students so other fields can be tested from the student side too.
 STUDENTS = [
+    MATHABO,
+    MATHABO_NONGWE,
     {
         "email": "graduate@scout.demo",
         "first_name": "Naledi",

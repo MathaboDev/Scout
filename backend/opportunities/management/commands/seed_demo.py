@@ -11,7 +11,13 @@ Creates:
   - 5 verified listings chosen so the eligible / all toggle is visibly
     different, plus 1 unverified listing to show FR9
   - 9 more fictional providers (logins provider@<name>.demo) with listings
-    in every field of study, and 2 more students (see _demo_catalogue.py)
+    in every field of study, and 3 more students (see _demo_catalogue.py),
+    including mathabo@scout.demo for the file upload + matching demo
+
+To put Mathabo back to "profile filled in, no documents, no applications"
+after a rehearsal:
+
+    python manage.py seed_demo --reset-mathabo
 
 Demo values only. Never run this against production data.
 """
@@ -28,10 +34,20 @@ from accounts.models import Profile, Student
 from opportunities.models import Opportunity
 from providers_admin.models import PlatformAdmin, Provider
 
-from applications.models import Application
+from applications.models import Application, Bookmark
 from core.choices import STATUS_OUTCOME_RECEIVED, STATUS_SUBMITTED
 
-from ._demo_catalogue import DEMO_APPLICANTS, PROVIDERS, STUDENTS
+from documents.models import Document
+from notifications.models import Notification
+
+from ._demo_catalogue import (
+    DEMO_APPLICANTS,
+    MATHABO,
+    MATHABO_NONGWE,
+    PROVIDERS,
+    RESETTABLE_STUDENTS,
+    STUDENTS,
+)
 
 User = get_user_model()
 DEMO_PASSWORD = "ScoutDemo-2026"
@@ -82,6 +98,32 @@ def _student(email, first, last, profile):
 
 class Command(BaseCommand):
     help = "Seed demo admin, provider, student and listings."
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--reset-mathabo",
+            action="store_true",
+            help="Undo a rehearsal for both Mathabo accounts: hide uploaded documents, delete "
+                 "applications, bookmarks and notifications, and restore the profile.",
+        )
+
+    def _reset_mathabo(self):
+        for item in RESETTABLE_STUDENTS:
+            student = Student.objects.get(email=item["email"])
+            sid = student.student_id
+            # Same as replacing a file in the app: the row is retired, not deleted.
+            docs = Document.objects.filter(student_id=sid, is_active=True).update(is_active=False)
+            apps = Application.objects.filter(student_id=sid).count()
+            Application.objects.filter(student_id=sid).delete()
+            Bookmark.objects.filter(student_id=sid).delete()
+            Notification.objects.filter(student_id=sid).delete()
+            # Clear every type-specific field first, then apply the seeded values.
+            profile = {"year_level": None, "graduate_type": None, "qualification": None, **item["profile"]}
+            Profile.objects.filter(student=student).update(**profile)
+            self.stdout.write(self.style.SUCCESS(
+                f"{item['email']} reset: {docs} document(s) hidden, "
+                f"{apps} application(s) removed, profile restored."
+            ))
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -226,10 +268,15 @@ class Command(BaseCommand):
             )
             new_apps += int(was_created)
 
+        if options.get("reset_mathabo"):
+            self._reset_mathabo()
+
         self.stdout.write(self.style.SUCCESS(f"{new_apps} new demo applicant(s) for ByteWorks."))
         self.stdout.write(self.style.SUCCESS(
             f"Demo ready. {created} new listing(s).\n"
             f"  Student : student@scout.demo / {DEMO_PASSWORD}\n"
+            f"  Mathabo : {MATHABO['email']} / {DEMO_PASSWORD} (Diploma IT student, no documents)\n"
+            f"  Mathabo : {MATHABO_NONGWE['email']} / {DEMO_PASSWORD} (Masters graduate, no documents)\n"
             f"  Provider: provider@byteworks.demo / {DEMO_PASSWORD}\n"
             f"  Also    : graduate@scout.demo, health@scout.demo and "
             f"provider@<kopano|mzansirail|indaba|umoya|lekgotla|sizwe|fynbos|brightfutures|karoo>.demo"
