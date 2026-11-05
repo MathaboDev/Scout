@@ -27,7 +27,6 @@ from . import queries
 from .report_pdf import build_summary_pdf
 from .models import Application, Bookmark
 
-audit = logging.getLogger("scout.audit")
 
 
 # ==================================================================
