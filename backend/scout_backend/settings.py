@@ -176,6 +176,8 @@ REST_FRAMEWORK = {
         # these global rates are a floor, not a substitute.
         "anon": "20/min",
         "user": "120/min",
+        "otp_verify": "5/min",
+        "otp_resend": "5/min",
     },
 }
 
@@ -255,16 +257,6 @@ LOGGING = {
 
 
 
-# 2. Token auth for every API call (the frontend sends "Authorization: Token <key>").
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_THROTTLE_RATES": {"anon": "30/minute"},
-}
 
 # 3. Where email links point (missing-document links, receipts, reminders).
 
