@@ -2,10 +2,12 @@
 // Every path here matches a route in backend/*/urls.py under /api/.
 
 // .env sets VITE_API_BASE_URL; VITE_API_URL is still accepted for older setups.
+// With neither set, a production build calls its own domain (on Vercel,
+// /api/* is routed to the Django backend); local dev falls back to :8000.
 const BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
-  "http://localhost:8000"
+  (import.meta.env.PROD ? "" : "http://localhost:8000")
 ).replace(/\/$/, "");
 
 // Documents endpoints belong to the existing documents app.
