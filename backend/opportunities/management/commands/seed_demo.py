@@ -4,7 +4,8 @@ Demo data for the end-to-end walkthrough. Safe to run more than once.
     python manage.py seed_demo
 
 Creates:
-  - 1 platform admin row (needed: every opportunity has a NOT NULL adminid)
+  - 1 admin login      admin@scout.demo        / ScoutDemo-2026
+    (platform admin row plus a staff login; every opportunity needs an adminid)
   - 1 provider login   provider@byteworks.demo / ScoutDemo-2026
   - 1 student login    student@scout.demo      / ScoutDemo-2026
     with a complete profile but NO documents, so the demo shows FR4
@@ -140,6 +141,11 @@ class Command(BaseCommand):
                 "created_at": now,
             },
         )
+        # The admin row alone can't log in: it needs a staff login with the same email.
+        admin_user = _auth_user(admin.email, "Scout", "Admin")
+        if not admin_user.is_staff:
+            admin_user.is_staff = True
+            admin_user.save(update_fields=["is_staff"])
 
         provider = _provider("provider@byteworks.demo", "ByteWorks", "Software", "Western Cape")
 
@@ -278,6 +284,7 @@ class Command(BaseCommand):
             f"  Mathabo : {MATHABO['email']} / {DEMO_PASSWORD} (Diploma IT student, no documents)\n"
             f"  Mathabo : {MATHABO_NONGWE['email']} / {DEMO_PASSWORD} (Masters graduate, no documents)\n"
             f"  Provider: provider@byteworks.demo / {DEMO_PASSWORD}\n"
+            f"  Admin   : {admin.email} / {DEMO_PASSWORD} (log in at /login?as=admin)\n"
             f"  Also    : graduate@scout.demo, health@scout.demo and "
             f"provider@<kopano|mzansirail|indaba|umoya|lekgotla|sizwe|fynbos|brightfutures|karoo>.demo"
         ))
