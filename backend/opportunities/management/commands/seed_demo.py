@@ -141,11 +141,14 @@ class Command(BaseCommand):
                 "created_at": now,
             },
         )
-        # The admin row alone can't log in: it needs a staff login with the same email.
+        # The admin row alone can't log in: it needs a staff login with the same
+        # email. The demo password is reset every run, because the login may
+        # already exist from a createsuperuser with a password nobody recorded.
         admin_user = _auth_user(admin.email, "Scout", "Admin")
-        if not admin_user.is_staff:
-            admin_user.is_staff = True
-            admin_user.save(update_fields=["is_staff"])
+        admin_user.is_staff = True
+        admin_user.is_active = True
+        admin_user.set_password(DEMO_PASSWORD)
+        admin_user.save(update_fields=["is_staff", "is_active", "password"])
 
         provider = _provider("provider@byteworks.demo", "ByteWorks", "Software", "Western Cape")
 
