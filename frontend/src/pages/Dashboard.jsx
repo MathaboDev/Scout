@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Pencil, Plus, Trash2, Users } from "lucide-react";
 import ProviderShell, { Card, ErrorNote, PageHeader, Toast } from "../components/ProviderShell.jsx";
 import { FieldChip, SkeletonCard, StatTile, TypeChip, UrgencyLabel } from "../components/ui.jsx";
+import DeleteAccount from "../components/DeleteAccount.jsx";
 import { api } from "../lib/api.js";
 import { closingLabel, formatDate } from "../lib/constants.js";
 
@@ -165,6 +166,8 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+
+      {!loading && <DeleteAccount role="provider" />}
 
       <Toast message={toast} />
     </ProviderShell>

@@ -1,7 +1,12 @@
 // The ONLY place the frontend talks to the backend.
 // Every path here matches a route in backend/*/urls.py under /api/.
 
-const BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
+// .env sets VITE_API_BASE_URL; VITE_API_URL is still accepted for older setups.
+const BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:8000"
+).replace(/\/$/, "");
 
 // Documents endpoints belong to the existing documents app.
 // If your documents/urls.py uses different paths, change ONLY these two.
@@ -110,6 +115,9 @@ export const api = {
     request("/api/accounts/resend-otp/", { method: "POST", body: { otp_id, resend_token } }),
   logout: () => request("/api/accounts/logout/", { method: "POST" }),
   me: () => request("/api/accounts/me/"),
+  // FR30: permanently delete the signed-in student or provider account
+  deleteAccount: (password) =>
+    request("/api/accounts/delete-account/", { method: "POST", body: { password } }),
   getProfile: () => request("/api/accounts/profile/"),
   updateProfile: (profileState) =>
     request("/api/accounts/profile/", { method: "PATCH", body: toProfilePayload(profileState) }),
@@ -155,6 +163,7 @@ export const api = {
   adminPendingListings: () => request("/api/providers-admin/listings/pending/"),
   adminVerifyListing: (opportunityId) =>
     request(`/api/providers-admin/listings/${opportunityId}/verify/`, { method: "POST" }),
+  adminActivity: () => request("/api/providers-admin/activity/"),
 
   // ---------- provider (FR10) ----------
   providerListings: () => request("/api/opportunities/provider/listings/"),

@@ -75,6 +75,12 @@ export default function Login() {
     >
       <form onSubmit={handleSubmit} noValidate>
 
+        {location.state?.flash && !error && (
+          <div className="mb-5 rounded-md bg-green-bg px-3.5 py-3 text-xs text-[#3F7A33]">
+            {location.state.flash}
+          </div>
+        )}
+
         {error && (
           <div className="mb-5 flex items-start gap-2 rounded-md bg-amber-bg px-3.5 py-3 text-xs text-[#966B1F]">
             <AlertCircle size={15} className="mt-px shrink-0" />

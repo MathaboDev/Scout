@@ -24,6 +24,7 @@ import ViewApplicants from "./pages/ViewApplicants.jsx";
 import ApplicantDetails from "./pages/ApplicantDetails.jsx";
 
 import AdminVerify from "./pages/AdminVerify.jsx";
+import AdminActivity from "./pages/AdminActivity.jsx";
 
 // Small helpers so each route line stays readable.
 // These are defined at the top level of the file (not inside App), so React
@@ -72,6 +73,7 @@ export default function App() {
 
           {/* Admin (FR9) */}
           <Route path="/admin/verify" element={<Admin><AdminVerify /></Admin>} />
+          <Route path="/admin/activity" element={<Admin><AdminActivity /></Admin>} />
 
           {/* Anything else goes home */}
           <Route path="*" element={<Navigate to="/" replace />} />

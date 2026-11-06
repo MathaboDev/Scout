@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   ShieldCheck,
   CheckCircle2,
-  LogOut,
   Calendar,
   Building2,
   AlertCircle,
@@ -16,15 +14,12 @@ import {
   FileText,
   Clock,
 } from "lucide-react";
-import { Mark } from "../components/Logo.jsx";
+import { AdminMobileNav, AdminSidebar } from "../components/AdminShell.jsx";
 import { api } from "../lib/api.js";
-import { useAuth } from "../context/AuthContext.jsx";
 import { formatDate, closingLabel } from "../lib/constants.js";
 
 // FR9: platform admin verifies listings before they go live to students.
 export default function AdminVerify() {
-  const { signOut } = useAuth();
-  const navigate = useNavigate();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -70,38 +65,12 @@ export default function AdminVerify() {
     }
   }
 
-  async function handleLogout() {
-    await signOut();
-    navigate("/login");
-  }
-
   return (
     <div className="flex min-h-screen w-full bg-cream text-ink">
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col bg-[#0A0A0A] px-4 py-6 text-white md:flex">
-        <div className="flex items-center gap-2.5 px-2">
-          <Mark size={32} />
-          <span className="text-[19px] font-medium tracking-tight">Scout</span>
-        </div>
-        <p className="mt-3 px-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/40">Admin portal</p>
-
-        <nav className="mt-6 flex flex-col gap-0.5">
-          <span className="flex items-center gap-2.5 rounded-md bg-white/10 px-3 py-2 text-sm font-medium">
-            <ShieldCheck size={16} />
-            Verification queue
-          </span>
-        </nav>
-
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="mt-auto flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-white/70 hover:bg-white/10 hover:text-white"
-        >
-          <LogOut size={16} />
-          Log out
-        </button>
-      </aside>
+      <AdminSidebar />
 
       <main className="flex-1 px-4 py-8 sm:px-8 lg:px-12">
+        <AdminMobileNav />
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>

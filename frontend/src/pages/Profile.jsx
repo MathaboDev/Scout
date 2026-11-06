@@ -12,6 +12,7 @@ import {
 import AppShell from "../components/AppShell.jsx";
 import FormField from "../components/FormField.jsx";
 import Button from "../components/Button.jsx";
+import DeleteAccount from "../components/DeleteAccount.jsx";
 import { api } from "../lib/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { Link } from "react-router-dom";
@@ -563,6 +564,8 @@ export default function Profile() {
           Your saved profile and documents can be reused when you apply for opportunities.
         </p>
       )}
+
+      <DeleteAccount role="student" />
     </AppShell>
    
   );

@@ -18,6 +18,7 @@ Exit code is 1 if anything failed, so it can run in CI.
 """
 
 import io
+import re
 import traceback
 import uuid
 
@@ -30,12 +31,17 @@ from django.db import connection, transaction
 from django.test.utils import override_settings
 from rest_framework.test import APIClient
 
+from django.contrib.auth import get_user_model
+from rest_framework.authtoken.models import Token
+
 from accounts.models import Student
+from providers_admin.models import PlatformAdmin
 from documents.models import Document
 from documents.supabase_storage import delete_document
 from opportunities.models import Opportunity
 
 DEMO_PASSWORD = "ScoutDemo-2026"
+User = get_user_model()
 # a tiny but valid PDF, used for the CV and matric certificate uploads
 PDF_BYTES = (
     b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
@@ -59,8 +65,12 @@ class Command(BaseCommand):
         self.student_id = None
 
         try:
-            # locmem email: reminders/notifications are captured, not sent
-            with override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"):
+            # locmem email: reminders/notifications are captured, not sent.
+            # Automatic reminders are off so a background run can't touch real data mid-test.
+            with override_settings(
+                EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+                REMINDERS_AUTORUN=False,
+            ):
                 with transaction.atomic():
                     try:
                         self.run_all()
@@ -112,6 +122,16 @@ class Command(BaseCommand):
     def login(self, email, password=DEMO_PASSWORD):
         r = self.client().post("/api/accounts/login/", {"email": email, "password": password}, format="json")
         return r, (r.json().get("token") if r.status_code == 200 else None)
+
+    @staticmethod
+    def _last_code(email):
+        """The six-digit code from the newest captured email sent to this address."""
+        for message in reversed(getattr(mail, "outbox", [])):
+            if email in message.to:
+                found = re.search(r"\b(\d{6})\b", message.body)
+                if found:
+                    return found.group(1)
+        return ""
 
     @staticmethod
     def body(r):
@@ -169,12 +189,7 @@ class Command(BaseCommand):
             format="json",
         )
         self.expect("Register new student -> 201", r.status_code == 201, f"{r.status_code} {self.body(r)}")
-        r = anon.post(
-            "/api/accounts/register/",
-            {"full_name": "Smoke Tester", "email": email, "password": password, "confirm_password": password},
-            format="json",
-        )
-        self.expect("Register same email again is refused", r.status_code == 400, str(r.status_code))
+        otp_id = self.body(r).get("otp_id")
         r = anon.post(
             "/api/accounts/register/",
             {"full_name": "X", "email": "other-" + email, "password": password, "confirm_password": "nope"},
@@ -183,6 +198,18 @@ class Command(BaseCommand):
         self.expect("Mismatched passwords are refused", r.status_code == 400, str(r.status_code))
         r, _ = self.login(email, "wrong-password")
         self.expect("Wrong password is refused", r.status_code in (400, 401), str(r.status_code))
+        r, _ = self.login(email, password)
+        self.expect("Unverified account is told to verify first", r.status_code == 403, str(r.status_code))
+        code = self._last_code(email)
+        r = anon.post("/api/accounts/verify-otp/", {"otp_id": otp_id, "otp_code": code}, format="json")
+        self.expect("Signup code from the email activates the account", r.status_code == 200, f"{r.status_code} {self.body(r)}")
+        # A verified email can't be registered twice (an unverified one can be redone).
+        r = anon.post(
+            "/api/accounts/register/",
+            {"full_name": "Smoke Tester", "email": email, "password": password, "confirm_password": password},
+            format="json",
+        )
+        self.expect("Register same email again is refused", r.status_code == 400, str(r.status_code))
         r, token = self.login(email, password)
         self.expect(
             "Log in -> token, role student",
@@ -234,6 +261,9 @@ class Command(BaseCommand):
         self.expect("Every row in eligible view is flagged eligible", all(o["eligible"] for o in eligible))
         self.expect("Average-too-low listing is excluded", "Cloud engineering intern" not in titles)
         self.expect("Other-field listing is excluded", "Data analyst intern" not in titles)
+        # The seeded UX listing may have been verified through the admin queue
+        # since; mark it unverified for this run (rolled back at the end).
+        Opportunity.objects.filter(title="UX design intern").update(is_verified=False)
         r = st.get("/api/opportunities/?view=all")
         all_rows = self.body(r).get("results", [])
         all_titles = {o["title"] for o in all_rows}
@@ -427,3 +457,45 @@ class Command(BaseCommand):
         r = st.post("/api/accounts/logout/")
         self.expect("Log out", r.status_code == 200, str(r.status_code))
         self.expect("Old token no longer works", st.get("/api/accounts/me/").status_code in (401, 403))
+
+        # ---------------- 11. admin activity ----------------
+        self.section("11. Admin activity monitoring")
+        admin_user = User.objects.filter(
+            is_staff=True, email__in=PlatformAdmin.objects.filter(is_active=True).values("email")
+        ).first()
+        if admin_user is None:
+            self.expect("An admin account exists", False, "no staff user with an active admin row")
+        else:
+            admin_token, _ = Token.objects.get_or_create(user=admin_user)
+            r = self.client(admin_token.key).get("/api/providers-admin/activity/")
+            data = self.body(r)
+            self.expect("Admin gets activity analytics", r.status_code == 200 and "totals" in data, str(r.status_code))
+            self.expect("Activity has a 14-day series", len(data.get("daily", [])) == 14)
+        _, token = self.login(email, password)
+        r = self.client(token).get("/api/providers-admin/activity/")
+        self.expect("A student cannot see admin activity", r.status_code == 403, str(r.status_code))
+
+        # ---------------- 12. delete account + sign up again ----------------
+        self.section("12. Delete account, then sign up again with the same email (FR30)")
+        me = self.client(token)
+        r = me.post("/api/accounts/delete-account/", {"password": "wrong-password"}, format="json")
+        self.expect("Wrong password does not delete the account", r.status_code == 400, str(r.status_code))
+        r = me.post("/api/accounts/delete-account/", {"password": password}, format="json")
+        self.expect("Delete account -> 200", r.status_code == 200, f"{r.status_code} {self.body(r)}")
+        self.expect(
+            "Student and login rows are gone",
+            not Student.objects.filter(email=email).exists() and not User.objects.filter(username=email).exists(),
+        )
+        self.expect("Deleted account's token no longer works", me.get("/api/accounts/me/").status_code in (401, 403))
+        r = anon.post(
+            "/api/accounts/register/",
+            {"full_name": "Smoke Tester", "email": email, "password": password, "confirm_password": password},
+            format="json",
+        )
+        self.expect("Same email can register again", r.status_code == 201, f"{r.status_code} {self.body(r)}")
+        r = anon.post(
+            "/api/accounts/verify-otp/",
+            {"otp_id": self.body(r).get("otp_id"), "otp_code": self._last_code(email)},
+            format="json",
+        )
+        self.expect("New account verifies and signs in", r.status_code == 200 and "token" in self.body(r), str(r.status_code))

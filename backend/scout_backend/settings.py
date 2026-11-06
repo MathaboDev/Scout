@@ -92,6 +92,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # FR21: sends due bookmark reminders in the background while the site has traffic.
+    "notifications.reminders.ReminderTriggerMiddleware",
 ]
 
 ROOT_URLCONF = "scout_backend.urls"
@@ -207,6 +209,11 @@ SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", default=not DEBUG)
 SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", default=not DEBUG)
 CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", default=not DEBUG)
 
+# Hosts such as Render and Railway end HTTPS at their proxy and forward
+# plain HTTP with X-Forwarded-Proto. Without this, SECURE_SSL_REDIRECT
+# would redirect every request forever.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # DRF auth tokens don't expire on their own. Session cookie expiration:
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 7 days
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
@@ -279,6 +286,16 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Scout <no-reply@scout
 #    Adds FRONTEND_URL to the list from the CORS_ALLOWED_ORIGINS env var
 #    (section above) instead of replacing it; dict.fromkeys drops duplicates.
 CORS_ALLOWED_ORIGINS = list(dict.fromkeys([*CORS_ALLOWED_ORIGINS, FRONTEND_URL]))
+
+# Needed for the Django admin site over HTTPS. Add the backend's own
+# https:// address through CSRF_TRUSTED_ORIGINS in .env when deployed.
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys([*env_list("CSRF_TRUSTED_ORIGINS"), *CORS_ALLOWED_ORIGINS]))
+
+# 5b. FR21 bookmark reminders. The check runs automatically in a background
+#     thread at most once per interval while the API is being used. Set
+#     REMINDERS_AUTORUN=false to rely only on `manage.py send_bookmark_reminders`.
+REMINDERS_AUTORUN = env_bool("REMINDERS_AUTORUN", default=True)
+REMINDER_CHECK_INTERVAL = int(env("REMINDER_CHECK_INTERVAL", default="600"))  # seconds
 
 # 6. NFR5 interim audit log for provider status changes.
 LOGGING = {

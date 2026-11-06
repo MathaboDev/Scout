@@ -27,6 +27,8 @@ from . import queries
 from .report_pdf import build_summary_pdf
 from .models import Application, Bookmark
 
+# NFR6: provider status changes are written here (settings.LOGGING "scout.audit").
+audit = logging.getLogger("scout.audit")
 
 
 # ==================================================================
@@ -87,12 +89,22 @@ def _receipt(row):
     }
 
 
+def _as_id(value):
+    """A positive integer id from the request body, or None. Stops bad input reaching SQL."""
+    try:
+        number = int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    return number if 0 < number < 2**63 else None
+
+
 def _load_for_apply(request, opportunity_id):
     """
     Shared checks for review + confirm. Returns (context, error_response).
     """
-    if not opportunity_id:
-        return None, Response({"error": "opportunity_id is required."}, status=400)
+    opportunity_id = _as_id(opportunity_id)
+    if opportunity_id is None:
+        return None, Response({"error": "A valid opportunity_id is required."}, status=400)
 
     student = request.student
     opp = matching.get_opportunity(student.student_id, opportunity_id)
@@ -321,7 +333,9 @@ def bookmarks(request):
     if request.method == "GET":
         return Response({"results": queries.student_bookmarks(student.student_id)})
 
-    opportunity_id = request.data.get("opportunity_id")
+    opportunity_id = _as_id(request.data.get("opportunity_id"))
+    if opportunity_id is None:
+        return Response({"error": "A valid opportunity_id is required."}, status=400)
     exists = Opportunity.objects.filter(
         opportunity_id=opportunity_id, is_active=True, is_verified=True
     ).exists()

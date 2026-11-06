@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.models import update_last_login
 from django.db import transaction
 from django.utils import timezone
 from django.contrib.auth.hashers import check_password
@@ -9,11 +10,16 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 from core.permissions import IsStudent, get_admin, get_provider, get_student
 from core.choices import PROVINCES
 
+from applications.models import Application, Bookmark
+from documents.models import Document
+from documents.supabase_storage import SupabaseStorageError, delete_document
+from notifications.models import Notification
+from opportunities.models import Opportunity
 from providers_admin.models import Provider
 
 from .models import Profile, Student, LoginOTP
@@ -90,6 +96,17 @@ def register(request):
             {"error": f"Use at least {MIN_PASSWORD_LENGTH} characters for your password."},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+    # A sign-up that was never verified (inactive, never logged in) must not
+    # lock the email forever: the person may have lost the code, or someone
+    # else may have typed their address. Remove it so registration can start
+    # again. Its student/provider row cascades from auth_user.
+    stale = User.objects.filter(username=email, is_active=False, last_login__isnull=True).first()
+    if stale is not None:
+        with transaction.atomic():
+            Student.objects.filter(auth_user=stale).delete()
+            Provider.objects.filter(auth_user=stale).delete()
+            stale.delete()
 
     # Any existing account (student OR provider OR auth_user) with this email blocks reuse.
     if (
@@ -244,7 +261,7 @@ def login(request):
         pending = User.objects.filter(username=email, is_active=False).first()
         if pending and pending.check_password(password):
             return Response(
-                {"error": "Please verify your email first. Check your inbox for the signup code."},
+                {"error": "Please verify your email first. Check your inbox for the signup code, or sign up again to get a new one."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         return Response(
@@ -259,6 +276,8 @@ def login(request):
             status=status.HTTP_403_FORBIDDEN,
         )
 
+    # Recorded for the admin activity dashboard ("active users").
+    update_last_login(None, user)
     token, _ = Token.objects.get_or_create(user=user)
     return Response(
         {"message": "Login successful.", "token": token.key, "user": payload},
@@ -332,6 +351,7 @@ def verify_otp(request):
                 status=status.HTTP_403_FORBIDDEN
             )
 
+        update_last_login(None, user)
         token, _ = Token.objects.get_or_create(user=user)
 
     return Response(
@@ -479,6 +499,105 @@ def logout(request):
 def me(request):
     """Lets the frontend re-check who is logged in after a page reload."""
     return Response({"user": _user_payload(request.user)})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([UserRateThrottle])
+def delete_account(request):
+    """
+    POST /api/accounts/delete-account/  {password}
+
+    FR30 (POPIA right to deletion): a student or provider permanently
+    deletes their own account. The password is asked for again so a
+    borrowed, signed-in browser can't do it.
+
+    Student: the student row is deleted, and the database cascades its
+    profile, documents, applications, bookmarks and notifications. Stored
+    files are removed from Supabase Storage afterwards.
+
+    Provider: its listings are deleted (cascading their applications and
+    bookmarks), and each affected student gets an in-app notice.
+
+    Finally auth_user is deleted, which removes the token and signup codes.
+    Nothing keeps the email, so the same address can register again.
+    """
+    user = request.user
+    password = request.data.get("password") or ""
+
+    if user.is_staff:
+        return Response(
+            {"error": "Administrator accounts can't be deleted from here."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    if not password or not user.check_password(password):
+        return Response(
+            {"error": "That password is incorrect."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    student = get_student(user)
+    provider = get_provider(user)
+    if student is None and provider is None:
+        return Response(
+            {"error": "User account is not linked to a Scout role."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    storage_paths = []
+    try:
+        with transaction.atomic():
+            if student is not None:
+                storage_paths = list(
+                    Document.objects.filter(student_id=student.student_id).values_list("file_url", flat=True)
+                )
+                student.delete()
+
+            if provider is not None:
+                listings = {
+                    o.opportunity_id: o.title
+                    for o in Opportunity.objects.filter(provider_id=provider.provider_id)
+                }
+                # The applications are about to be deleted with the listings,
+                # so tell each student first. These rows carry no application
+                # id, so the cascade leaves them in place.
+                for app in Application.objects.filter(opportunity_id__in=listings.keys()):
+                    Notification.objects.create(
+                        student_id=app.student_id,
+                        notification_type="application_withdrawn",
+                        channel="in_app",
+                        message=(
+                            f"{provider.company_name} closed its Scout account, so your "
+                            f"application to {listings[app.opportunity_id]} "
+                            f"({app.reference_number}) was removed."
+                        ),
+                    )
+                # The live database does not cascade from opportunity to
+                # application/bookmark, so remove those rows first (their
+                # notifications do cascade).
+                Application.objects.filter(opportunity_id__in=listings.keys()).delete()
+                Bookmark.objects.filter(opportunity_id__in=listings.keys()).delete()
+                Opportunity.objects.filter(provider_id=provider.provider_id).delete()
+                provider.delete()
+
+            user.delete()
+    except Exception:
+        logger.exception("Account deletion failed.")
+        return Response(
+            {"error": "We couldn't delete your account right now. Please try again."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    # Files are removed after the database commit. A storage failure is
+    # logged for manual cleanup but never brings the account back.
+    for path in storage_paths:
+        try:
+            delete_document(path)
+        except SupabaseStorageError:
+            logger.warning("Could not delete a stored document after account deletion.")
+
+    return Response({"message": "Your account has been deleted."}, status=status.HTTP_200_OK)
 
 
 class ProfileView(RetrieveUpdateAPIView):

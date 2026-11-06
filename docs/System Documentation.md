@@ -87,7 +87,7 @@ Scout is a web platform that helps tertiary students and graduates find opportun
 |---|---|---|
 | FR19 | A dashboard lists every application with its status: Submitted, Under Review, or Outcome Received. It refreshes automatically every 15 seconds. | Built |
 | FR20 | A student saves opportunities to a watchlist and removes them again. The watchlist shows closing dates. Saving the same opportunity twice has no additional effect. | Built |
-| FR21 | The system sends a reminder three days before a bookmarked opportunity closes, once per bookmark. Students who have already applied are skipped. | Partial. The reminder is a scheduled command. No scheduler is configured, so reminders do not currently go out unattended. |
+| FR21 | The system sends a reminder three days before a bookmarked opportunity closes, once per bookmark. Students who have already applied are skipped. | Built. The check runs automatically in a background thread at most every 10 minutes while the site has traffic, and can also be run as the `send_bookmark_reminders` command or a cron job. Each bookmark is claimed before sending, so it is reminded once even with several workers. |
 | FR22 | The student is notified when an application is submitted, a document is missing, a status changes, an outcome is recorded, and a bookmarked deadline approaches. Notifications appear in the application and, where appropriate, by email. The student can mark one or all as read. | Built |
 
 **Provider**
@@ -106,7 +106,7 @@ Scout is a web platform that helps tertiary students and graduates find opportun
 | FR27 | Every new listing enters a verification queue. An administrator reviews the queue, opens a listing's full detail and verifies it. | Built, untested |
 | FR28 | Verification makes the listing visible to matching students and records the verifying administrator against the listing as an audit trail. A listing already verified cannot be verified again. | Built, untested |
 | FR29 | Providers see only a student's professional profile. A student can view everything stored about them through the profile and documents screens. | Built |
-| FR30 | POPIA also grants rights to restrict and delete personal data. | Partial. No self-service mechanism. Deletion is a manual database operation. |
+| FR30 | POPIA also grants the right to delete personal data. A student or provider deletes their own account after re-entering their password. A student's profile, documents (including stored files), applications, bookmarks and notifications are removed. A provider's listings and the applications to them are removed, and affected students are notified. The same email can then register again. | Built |
 
 **Not implemented**
 
@@ -115,7 +115,6 @@ Scout is a web platform that helps tertiary students and graduates find opportun
 | Password reset | A user who forgets a password cannot recover the account without manual help |
 | Administrator user management | No interface to list, edit or deactivate users |
 | Listing or account suspension | No way to suspend content that breaches platform rules |
-| Platform activity monitoring | No activity dashboard |
 
 ### 1.2 Non-functional requirements
 
@@ -129,7 +128,7 @@ Scout is a web platform that helps tertiary students and graduates find opportun
 | NFR6 | Auditability | Each verified listing records which administrator verified it. Every provider status change is written to the application log with the provider and a timestamp. | Partial. The status-change audit is a log file, not a queryable table. |
 | NFR7 | Notification timeliness | The dashboard polls every 15 seconds, so a provider's change reaches the student within roughly that interval. Emails are sent as soon as the triggering action completes. A mail failure is logged and never blocks the underlying action. | Built |
 | NFR8 | Usability | Works across desktop and tablet widths. Validation runs in the browser first, with server errors shown in one plain-language message. Loading states shown while fetching. Animations respect the reduced-motion setting. | Built |
-| NFR9 | Performance | Listing results come from a single database query, paginated at 20 records per page. | Built, untested. Two-second load and 500 concurrent users are design targets, not measured results. |
+| NFR9 | Performance | Listing results come from a single database query. Every page tested responds well under two seconds locally (see section 9). | Partial. The 500 concurrent user target has not been load-tested. |
 | NFR10 | Reliability | Managed hosting for database, file storage and email. | Built, untested. The 99 percent uptime target has not been measured. |
 | NFR11 | Maintainability | Backend split into focused Django applications. Role logic in one shared permissions module. Frontend component-based with a single module for all API calls. | Built |
 | NFR12 | Schema ownership | Application tables defined by hand in `schema.sql`. Django models marked unmanaged so Django never alters the schema. | Partial. `schema.sql` is missing the `provider.authuserid` column the live database and code both use. |
@@ -214,13 +213,13 @@ Scout is a three-tier web application. The React frontend runs in the browser an
 | Django app | Responsibility |
 |---|---|
 | `scout_backend` | Project shell: `settings.py`, `urls.py`, `wsgi.py` |
-| `core` | Shared code: `permissions.py` (role checks for all three roles), `choices.py` (fixed value lists), `sql.py` and `db_utils.py` (raw SQL helpers), `auth_utils.py`, and `smoke_test` (end-to-end check) |
+| `core` | Shared code: `permissions.py` (role checks for all three roles), `choices.py` (fixed value lists), `sql.py` and `db_utils.py` (raw SQL helpers), `auth_utils.py`, `smoke_test` (quick end-to-end check) and `system_test` (full system test with report) |
 | `accounts` | Registration, email verification by code, login, logout, student profile. `otp_utils.py` holds code generation, hashing and expiry. `throttles.py` holds the verification rate limits |
 | `opportunities` | Opportunity model, student browse views, provider listing management, and `matching.py` (the eligibility query). Management commands `seed_demo` and `verify_listings` |
 | `applications` | Assisted apply, receipts, summary report, bookmarks, provider applicant review. `queries.py` holds the reporting SQL, `report_pdf.py` builds the summary PDF |
 | `documents` | Document model, upload and listing views, signed links, and `supabase_storage.py` (the storage adapter) |
-| `notifications` | In-app and email notifications through `utils.py`, plus the `send_bookmark_reminders` command |
-| `providers_admin` | Provider and PlatformAdmin models, the administrator verification queue and verify action |
+| `notifications` | In-app and email notifications through `utils.py`. `reminders.py` holds the deadline reminder rule and the middleware that runs it automatically; `send_bookmark_reminders` runs it on demand |
+| `providers_admin` | Provider and PlatformAdmin models, the administrator verification queue and verify action, and the activity monitoring endpoint |
 
 ### 3.4 Eligibility rule
 
@@ -311,7 +310,8 @@ The `profile` table prevents inconsistent data at the database level. A Tertiary
 | `src/pages/Eligible.jsx` | Eligible and All toggle with opportunity cards |
 | `src/pages/JobDetails.jsx`, `Apply.jsx`, `Watchlist.jsx` | Listing detail, mandatory review and submit, bookmarks |
 | `src/pages/Dashboard.jsx`, `PostListing.jsx`, `ViewApplicants.jsx`, `ApplicantDetails.jsx` | Provider dashboard, listing form, applicant list and detail |
-| `src/pages/AdminVerify.jsx` | Administrator verification queue with a detail panel |
+| `src/pages/AdminVerify.jsx`, `AdminActivity.jsx` | Administrator verification queue with a detail panel, and the activity dashboard (totals, 14-day sign-up and application charts, pipeline, top listings, recent events) |
+| `src/components/DeleteAccount.jsx` | Delete account card and password-confirmed dialog, shown on the student profile and provider dashboard |
 | `src/components/` | Reusable parts: AppShell, ProviderShell, AuthLayout, RequireAuth (role routing), Navbar, Button, FormField, JobCard and others |
 | `src/context/AuthContext.jsx` | Token and user state, sign in and sign out |
 | `src/lib/api.js` | One place for all API calls. Attaches the auth token |
@@ -357,8 +357,10 @@ The interface uses an ink, cream and lime palette with Roboto type and lucide ic
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Frontend calls localhost after deployment | `api.js` reads `VITE_API_URL`, but the environment file sets `VITE_API_BASE_URL`. Local development works only because the fallback is the same address | Rename one so the two match, then rebuild |
-| Backend will not start, missing variable | `.env.example` omits the Supabase variables, two of which are required | Copy the Supabase and email variables from section 8.2 |
+| Frontend calls localhost after deployment | `VITE_API_BASE_URL` was not set on the static host when the frontend was built | Set it to the backend's https address, then rebuild |
+| Backend will not start, missing variable | A required variable from `.env.example` was left out of `.env` | Copy every variable from `.env.example` and fill it in |
+| Every page redirects forever after deployment | The host ends HTTPS at its proxy | Already handled by `SECURE_PROXY_SSL_HEADER`. Check the host forwards `X-Forwarded-Proto` |
+| `Please verify your email first` and the code is lost | The sign-up was never completed | Sign up again with the same email. An unverified sign-up is replaced |
 | `FATAL: tenant/user postgres.xxxx not found` | Wrong project reference, paused Supabase project, or wrong pooler port | Resume the project and copy the connection details again from the dashboard |
 | Verification code never arrives | Wrong Brevo login or key, or `EMAIL_BACKEND` still set to the console backend | Check the Brevo credentials and that the SMTP backend is selected. Check the spam folder |
 | `Unable to send verification code` (503) | The mail service rejected the message. The code is invalidated | Read the server log, then register again or resend |
@@ -382,44 +384,63 @@ The interface uses an ink, cream and lime palette with Roboto type and lucide ic
 
 ## 9. Testing summary and known limitations
 
-An end-to-end check exists as a management command: `python manage.py smoke_test`. It walks the full student and provider journey through the real API, prints pass or fail for every step, rolls back all database changes, and deletes files uploaded during the test. It needs a filled-in `.env`, a reachable database, and `seed_demo` run once. Running it is the fastest way to convert the rows marked *Not yet run* below into recorded results.
+Two test commands exercise the system through the real API against the Supabase database. Both run inside one transaction that is rolled back at the end, capture email in memory instead of sending it, and delete any files they upload to storage. They need a filled-in `.env`, a reachable database, `seed_demo` run once, and an administrator account.
 
-| Area | Tests | Results |
-|---|---|---|
-| Build | Frontend production build, Django system check | Pass. Both complete with no errors |
-| Student registration | Register, receive the code by email, verify, land on the dashboard | Pass. Confirmed manually with a real inbox |
-| Email delivery | Brevo SMTP delivers the verification code | Pass. Confirmed manually |
-| Provider registration | Register with company details, verify, reach the provider dashboard | Not yet run |
-| Administrator access | Sign in with a staff account, open the queue, verify a listing, confirm the audit field is set | Not yet run |
-| Code security | Wrong code rejected, expired code rejected, used code rejected, attempt limit enforced | Not yet run |
-| Resend and rate limits | Resend works, cooldown enforced, resend limit enforced, endpoint rate limit enforced | Not yet run |
-| Login | Correct credentials succeed, wrong credentials rejected, unverified account told to verify | Not yet run |
-| Profile | Create and update as Tertiary Student and as Graduate, invalid combinations rejected by the database | Not yet run |
-| Documents | Valid upload accepted, wrong type rejected, file over 5 MB rejected, re-upload retires the previous row | Not yet run |
-| Eligibility matching | Eligible versus All, unverified and expired listings hidden, eligibility flag correct per criterion | Not yet run |
-| Assisted apply | Review screen blocks submission, missing document alert sent once, confirm creates the application with a reference number | Not yet run |
-| Duplicate protection | Second application to the same listing rejected, second bookmark has no effect | Not yet run |
-| Provider listings | Create, edit and delete own listing. Another provider's listing returns not-found | Not yet run |
-| Provider outcomes | Status moves forward only, outcome cannot be changed once set, student is notified | Not yet run |
-| Notifications | In-app feed updates, email sent, mark as read works | Not yet run |
-| Summary report | PDF generates with correct totals and reference numbers | Not yet run |
-| Permissions | A student cannot reach provider or administrator endpoints, and the reverse | Not yet run |
+- `python manage.py system_test` is the full system test: 421 checks, each tagged with the requirement it proves. `--report "../docs/System Test Report.md"` writes every result to a file, and `--with-frontend` also runs the frontend production build.
+- `python manage.py smoke_test` is a quicker happy-path check (83 checks).
 
-Only rows marked Pass were actually executed. No result above is assumed.
+Final run, 6 November 2026: **418 passed, 0 failed, 3 warnings.** The full list is in `docs/System Test Report.md`.
+
+| Area | What was tested | Result |
+| --- | --- | --- |
+| Build | Django system check, frontend production build, requirements install | Pass |
+| Student registration | Account created inactive, code emailed, correct code activates and signs in, duplicate, short-password, mismatched and single-name sign-ups refused, email unique across roles, abandoned sign-up can be redone | Pass |
+| Code security | Only hashes stored, 5-minute expiry, wrong, malformed, expired and reused codes refused, 5-attempt limit | Pass |
+| Resend and rate limits | 60-second cooldown, 3-resend limit, old code invalid after resend, wrong resend token refused, 5 per minute on verify and resend, 20 per minute anonymous | Pass |
+| Login and logout | Email and password only, case-insensitive email, same error for wrong password and unknown email, unverified account told to verify, token deleted on logout | Pass |
+| Provider registration | Company details stored, phone optional, invalid province refused, verify and reach the dashboard | Pass |
+| Permissions | Every protected endpoint refuses anonymous users, each role refused on the others' endpoints, staff flag alone is not admin | Pass |
+| Profile | Tertiary and Graduate profiles, every invalid combination refused by the API and by the database CHECK constraints, no sensitive fields | Pass |
+| Documents | PDF, PNG and JPG accepted, other types and files over 5 MB refused, replacing retires the old row, one-hour signed links, other students get not-found | Pass |
+| Eligibility matching | Each criterion tested on its own, including the boundary values and the qualification ranking. Expired, unverified and removed listings hidden. Values sent by the browser are ignored | Pass |
+| Assisted apply | Review blocks submission until CV and matric are uploaded, alert sent once with a link back, reference number format, receipt emailed, duplicate refused by API and database, closed, ineligible and incomplete-profile cases refused | Pass |
+| Dashboard and PDF | Statuses shown, receipts reopen, summary totals, PDF downloads, other students cannot see them | Pass |
+| Bookmarks | Save, save again has no effect, closing date shown, remove, unverified listing refused | Pass |
+| Provider listings | Invalid listings refused, created unverified, cannot self-verify, editing returns to the queue, soft delete, another provider gets not-found | Pass |
+| Provider outcomes | Applicant profile and attached documents shown without file links, forward-only status, outcome locked once recorded, student notified in the application and by email | Pass |
+| Administrator verification | Queue oldest first with full detail, verify stamps the admin, listing becomes visible, verifying twice refused | Pass |
+| Notifications | Unread count, mark one and all read, another student cannot mark yours, email copy logged, mail outage does not block the in-app notice | Pass |
+| Reminders | Sent inside the 3-day window only, skipped when already applied or closed, once per bookmark, automatic background trigger | Pass |
+| Activity monitoring | Totals, 14-day series, status breakdown and feed update after a new sign-up | Pass |
+| Account deletion | Password required, every row and stored file removed, same email signs up again, provider deletion removes its listings and notifies applicants | Pass |
+| Security | Hashed passwords, no secrets in responses, SQL injection probes refused, bad input gives a clean error, upload names cannot choose the storage path, SSL required | Pass. Warning: tokens do not expire |
+| Performance | Eligible view 716 ms, All view 1,059 ms, dashboard 532 ms, admin activity 1,296 ms, measured from a developer machine to Supabase | Pass. Warning: 500 concurrent users not load-tested |
+| Deployment configuration | Requirements file readable by hosts, gunicorn listed, `.env.example` complete, HTTPS proxy header set, frontend reads the variable its `.env` sets | Pass. Warning: `DEBUG` must be set to False on the server |
+
+### Defects found and fixed during testing
+
+| Defect | Fix |
+| --- | --- |
+| Providers could not change an application's status: every update crashed because the audit logger was never defined | Logger defined in `applications/views.py` |
+| A provider could not delete its account: the live database does not cascade from listings to applications and bookmarks | Applications and bookmarks are deleted before the listings |
+| A non-numeric opportunity id on the apply or bookmark endpoints crashed the server | Ids are validated first and refused with a clear message |
+| An abandoned sign-up locked that email forever, with no way to get a new code | Registering again replaces a sign-up that was never verified |
+| The frontend read `VITE_API_URL` while `.env` set `VITE_API_BASE_URL`, so a deployed build would call localhost | `api.js` reads `VITE_API_BASE_URL` |
+| `requirements.txt` was saved as UTF-16, which some hosts cannot read, and had no production server | Re-saved as UTF-8, `gunicorn` added |
+| Behind a hosting proxy, every page would redirect forever | `SECURE_PROXY_SSL_HEADER` set, `CSRF_TRUSTED_ORIGINS` added |
+| `.env.example` was missing the Supabase and email variables | All variables listed |
 
 ### Known limitations
 
 | Area | Limitation | Impact |
 |---|---|---|
-| Deployment | `api.js` reads `VITE_API_URL` while the environment file sets `VITE_API_BASE_URL` | The frontend will call localhost in production. Fix before any deployment |
-| Setup | `.env.example` omits the Supabase and email variables, two of which are required | Anyone following it gets a backend that will not start |
-| Schema | `schema.sql` is missing `provider.authuserid`, which the live database and the code both use | The schema file no longer describes the live database, which matters for the ERD |
-| Reminders | Deadline reminders only run when a scheduler calls the command, and none is configured | Reminders are not currently sent |
+| Schema | The live database differs from `schema.sql`: `application.opportunityid` and `bookmark.opportunityid` do not cascade on delete, and the live database has an extra `opportunity_required_document` table | The code deletes in the right order, so nothing breaks, but the ERD should follow the live database |
+| Reminders | The automatic check only runs while the site receives traffic | With no visitors, a reminder waits until the next request. Schedule `send_bookmark_reminders` on the host to remove this gap |
 | Sessions | Authentication tokens do not expire | A leaked token stays valid until the user signs out |
 | Audit trail | Provider status changes go to a log file, not a database table | The audit is not queryable and is lost if logs rotate |
-| POPIA | Restrict and delete rights have no self-service mechanism | Deletion is a manual database operation |
+| POPIA | The right to restrict processing has no self-service mechanism. Deletion is self-service | Restriction needs manual help |
 | Account recovery | No password reset | A user who forgets a password needs manual help |
-| Administration | No user management, suspension or activity monitoring | An administrator can only verify listings |
+| Administration | No user management or suspension. Activity monitoring is read-only | An administrator verifies listings and views analytics, but cannot act on accounts |
 | Performance | The two-second and 500-user targets have not been load-tested | They remain design targets, not measured results |
 
 These limitations are recorded so the next team can continue without rediscovering them.
