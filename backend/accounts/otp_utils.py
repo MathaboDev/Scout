@@ -1,10 +1,12 @@
 import secrets
 from datetime import timedelta
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
+from django.utils.html import escape
 
 from .models import LoginOTP
 
@@ -88,13 +90,70 @@ def send_login_otp(user, otp_code):
         "Scout Team"
     )
 
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [user.email],
-        fail_silently=False
-    )
+    email = _BrandedEmail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+    email.attach_alternative(_otp_html(user.first_name or "there", otp_code), "text/html")
+    email.send(fail_silently=False)
+
+
+# Same file as the PDF report letterhead; embedded so it shows without a hosted URL.
+LOGO_PATH = Path(__file__).resolve().parent.parent / "core" / "assets" / "scout-logo.png"
+
+
+class _BrandedEmail(EmailMultiAlternatives):
+    def message(self, *args, **kwargs):
+        msg = super().message(*args, **kwargs)
+        msg.get_body(("html",)).add_related(
+            LOGO_PATH.read_bytes(), "image", "png",
+            cid="<scout-logo>", disposition="inline", filename="scout-logo.png",
+        )
+        return msg
+
+
+def _otp_html(first_name, otp_code):
+    name = escape(first_name)
+    return f"""\
+<!doctype html>
+<html>
+<body style="margin:0;padding:0;background:#F3F3F1;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F3F1;padding:32px 16px;">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;font-family:Roboto,'Helvetica Neue',Arial,sans-serif;color:#101014;">
+
+<tr><td style="background:#101014;border-radius:14px 14px 0 0;padding:20px 28px;">
+<table role="presentation" cellpadding="0" cellspacing="0"><tr>
+<td style="vertical-align:middle;"><img src="cid:scout-logo" width="40" height="40" alt="Scout" style="display:block;border-radius:50%;"></td>
+<td style="vertical-align:middle;padding-left:12px;font-size:20px;font-weight:700;color:#FFFFFF;">Scout</td>
+</tr></table>
+</td></tr>
+
+<tr><td style="background:#FFFFFF;padding:36px 28px 28px;border-left:1px solid #E5E5E2;border-right:1px solid #E5E5E2;">
+<p style="margin:0 0 6px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#6B6B6B;">Verify your email</p>
+<h1 style="margin:0 0 16px;font-size:26px;line-height:1.25;font-weight:700;">Hi {name}, here's your code.</h1>
+<p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#3A3A3F;">Enter this six-digit code on Scout to continue.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td align="center" style="background:#F3F3F1;border:1px solid #E5E5E2;border-radius:12px;padding:22px 12px;">
+<span style="font-size:36px;font-weight:700;letter-spacing:12px;font-family:'Roboto Mono',Consolas,Menlo,monospace;color:#101014;">{otp_code}</span>
+</td></tr></table>
+
+<p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#3A3A3F;">This code expires in <strong>{OTP_EXPIRY_MINUTES} minutes</strong>.</p>
+<p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#6B6B6B;">Didn't request this? You can safely ignore this email.</p>
+</td></tr>
+
+<tr><td style="background:#101014;border-radius:0 0 14px 14px;padding:24px 28px;">
+<p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#FFFFFF;">We find what <span style="color:#E16041;">fits</span> for you.</p>
+<p style="margin:0;font-size:12px;line-height:1.6;color:#A8A8AD;">The one-profile platform for South African students to find, apply for and track internships, learnerships and graduate programmes.</p>
+</td></tr>
+
+<tr><td align="center" style="padding:18px 8px 0;font-size:11px;color:#8A8A8F;">
+Scout &middot; Group 3 &middot; Sent to you because this email was used on Scout.
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>"""
 
 
 def verify_login_otp(otp_record, otp_code):
