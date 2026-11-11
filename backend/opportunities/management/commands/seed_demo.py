@@ -15,6 +15,13 @@ Creates:
     in every field of study, and 3 more students (see _demo_catalogue.py),
     including mathabo@scout.demo for the file upload + matching demo
 
+For the admin demo it also posts 5 UNVERIFIED listings (PENDING_LISTINGS in
+_demo_catalogue.py) that wait in the admin queue. 4 of them match John's
+profile, so they appear in his Eligible view once verified. To put them
+back in the queue after a rehearsal:
+
+    python manage.py seed_demo --reset-queue
+
 To put Mathabo back to "profile filled in, no documents, no applications"
 after a rehearsal:
 
@@ -45,6 +52,7 @@ from ._demo_catalogue import (
     DEMO_APPLICANTS,
     MATHABO,
     MATHABO_NONGWE,
+    PENDING_LISTINGS,
     PROVIDERS,
     RESETTABLE_STUDENTS,
     STUDENTS,
@@ -107,6 +115,20 @@ class Command(BaseCommand):
             help="Undo a rehearsal for both Mathabo accounts: hide uploaded documents, delete "
                  "applications, bookmarks and notifications, and restore the profile.",
         )
+        parser.add_argument(
+            "--reset-queue",
+            action="store_true",
+            help="Put the admin demo listings back to unverified so they wait in the queue again.",
+        )
+
+    def _reset_queue(self):
+        reset = 0
+        for email, item in PENDING_LISTINGS:
+            provider = Provider.objects.get(email=email)
+            reset += Opportunity.objects.filter(
+                provider_id=provider.provider_id, title=item["title"]
+            ).update(is_verified=False, is_active=True)
+        self.stdout.write(self.style.SUCCESS(f"{reset} listing(s) put back in the admin queue."))
 
     def _reset_mathabo(self):
         for item in RESETTABLE_STUDENTS:
@@ -255,6 +277,25 @@ class Command(BaseCommand):
                 )
                 created += int(was_created)
 
+        # Admin demo: unverified listings waiting in the verification queue.
+        # Posted a little apart so the queue (oldest first) has a stable order.
+        for i, (email, item) in enumerate(PENDING_LISTINGS):
+            owner = Provider.objects.get(email=email)
+            data = {k: v for k, v in item.items() if k != "days"}
+            data["closing_date"] = now + timedelta(days=item["days"])
+            _, was_created = Opportunity.objects.get_or_create(
+                provider_id=owner.provider_id,
+                title=data["title"],
+                defaults={
+                    **data,
+                    "is_verified": False,
+                    "admin_id": admin.admin_id,
+                    "is_active": True,
+                    "posted_at": now - timedelta(hours=len(PENDING_LISTINGS) - i),
+                },
+            )
+            created += int(was_created)
+
         # Demo applicants for the ByteWorks provider screens, one per status
         new_apps = 0
         for i, item in enumerate(DEMO_APPLICANTS, start=1):
@@ -279,6 +320,11 @@ class Command(BaseCommand):
 
         if options.get("reset_mathabo"):
             self._reset_mathabo()
+        if options.get("reset_queue"):
+            self._reset_queue()
+
+        pending = Opportunity.objects.filter(is_active=True, is_verified=False).count()
+        self.stdout.write(self.style.SUCCESS(f"{pending} listing(s) waiting in the admin queue."))
 
         self.stdout.write(self.style.SUCCESS(f"{new_apps} new demo applicant(s) for ByteWorks."))
         self.stdout.write(self.style.SUCCESS(

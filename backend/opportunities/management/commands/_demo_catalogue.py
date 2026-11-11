@@ -354,3 +354,40 @@ DEMO_APPLICANTS = [
         "application": ("Data analyst intern", "Submitted", None, 2),
     },
 ]
+
+
+# Listings for the admin verification demo. seed_demo posts them as
+# UNVERIFIED, so they wait in the admin queue and no student can see them.
+# Each tuple: provider login email, listing.
+#
+# Built for John, the student registered live in the demo:
+#   Tertiary Student, CPUT, Information Technology, Western Cape,
+#   year 2, 72% average, wants an Internship.
+# The first four match him, so each one appears in his "Eligible" view as
+# soon as the admin verifies it. The last one does not (Gauteng only), to
+# show that verifying a listing does not mean every student sees it.
+#
+# To put them back in the queue after a rehearsal:
+#     python manage.py seed_demo --reset-queue
+PENDING_LISTINGS = [
+    ("provider@byteworks.demo",
+     listing("Junior QA tester intern", "Internship", "Information Technology",
+             "Write test cases and find bugs in our client web apps before each release.", 30)),
+    ("provider@kopano.demo",
+     listing("Dashboard developer intern", "Internship", "Information Technology",
+             "Build Power BI dashboards for retail clients with our analytics team.", 26,
+             minimum_average=70)),
+    ("provider@fynbos.demo",
+     listing("Lab systems IT intern", "Internship", "Information Technology",
+             "Look after the lab's computers, network and sample-tracking software.", 21,
+             eligibility_type="Tertiary Student", province="Western Cape")),
+    ("provider@umoya.demo",
+     listing("Mobile app developer intern", "Internship", "Information Technology",
+             "Help build the Android app our nurses use to book clinic visits.", 33,
+             year_level_required=2, minimum_average=65)),
+    # NOT eligible for John: Gauteng only, he is in the Western Cape
+    ("provider@mzansirail.demo",
+     listing("Network support intern (Johannesburg)", "Internship", "Information Technology",
+             "Support the network and radio systems at our Johannesburg depot.", 28,
+             province="Gauteng")),
+]
